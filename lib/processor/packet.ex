@@ -1,5 +1,10 @@
-defmodule ScssEx.Packet do
-  alias ScssEx.Varint.LEB128
+defmodule ScssEx.Processor.Packet do
+  @moduledoc """
+  Sass "packets" are sent and received via :stdio.  They are LEB128 prepended
+  to give a known packet length.
+  """
+
+  alias ScssEx.Processor.LEB128
 
   defstruct [:size, :body, :rest]
 

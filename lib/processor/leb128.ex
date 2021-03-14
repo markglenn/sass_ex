@@ -1,4 +1,4 @@
-defmodule ScssEx.Varint.LEB128 do
+defmodule ScssEx.Processor.LEB128 do
   @moduledoc """
   LEB128 (Little Endian Base 128) encoder and decoder.
 

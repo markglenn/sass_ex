@@ -27,8 +27,8 @@ defmodule ScssEx.SassProcessor do
     ImportRequest
   }
 
-  alias ScssEx.Packet
-  alias ScssEx.Request
+  alias ScssEx.Processor.Packet
+  alias ScssEx.Processor.OpenRequest
 
   @type state_t :: %{
           port: port,
@@ -49,13 +49,11 @@ defmodule ScssEx.SassProcessor do
   end
 
   @spec compile(GenServer.server(), String.t()) :: term
-  def compile(pid, body) do
-    GenServer.call(pid, {:compile, body})
-  end
+  def compile(pid, body), do: GenServer.call(pid, {:compile, body})
 
   def handle_call({:compile, body}, from, state) do
     input = StringInput.new(%{source: body})
-    request = %Request{id: System.unique_integer([:positive]), pid: from}
+    request = %OpenRequest{id: System.unique_integer([:positive]), pid: from}
 
     message =
       CompileRequest.new(%{
@@ -126,7 +124,7 @@ defmodule ScssEx.SassProcessor do
       nil ->
         state
 
-      %Request{pid: pid} ->
+      %OpenRequest{pid: pid} ->
         GenServer.reply(pid, packet)
         Map.delete(state.requests, id)
     end
@@ -137,7 +135,7 @@ defmodule ScssEx.SassProcessor do
       nil ->
         state
 
-      %Request{pid: pid} ->
+      %OpenRequest{pid: pid} ->
         GenServer.reply(pid, packet)
         Map.delete(state.requests, id)
     end
