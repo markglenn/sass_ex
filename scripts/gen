@@ -1,0 +1,3 @@
+#!/bin/sh
+
+protoc --elixir_out=./lib embedded_sass.proto

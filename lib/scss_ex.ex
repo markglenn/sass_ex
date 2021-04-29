@@ -3,16 +3,20 @@ defmodule ScssEx do
   Documentation for `ScssEx`.
   """
 
-  def main(_args) do
-    {:ok, pid} = ScssEx.SassProcessor.start_link()
+  use Application
 
-    response =
-      ScssEx.SassProcessor.compile(
-        pid,
-        "@import 'testing'; .hello { color: red; }"
-      )
+  alias ScssEx.SassProcessor
 
-    response
-    |> IO.inspect()
+  def compile(content \\ ".hello { color: red; }") do
+    SassProcessor.compile(SassProcessor, content)
+  end
+
+  def start(_type, _args) do
+    children = [
+      # Define workers and child supervisors to be supervised
+      {ScssEx.SassProcessor, importers: [ScssEx.Importer.FileImporter]}
+    ]
+
+    Supervisor.start_link(children, strategy: :one_for_one, name: ScssEx)
   end
 end

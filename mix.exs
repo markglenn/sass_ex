@@ -6,8 +6,8 @@ defmodule ScssEx.MixProject do
       app: :scss_ex,
       version: "0.1.0",
       elixir: "~> 1.11",
-      start_permanent: Mix.env() == :prod,
-      escript: escript(),
+      # Mix.env() == :prod,
+      start_permanent: true,
       deps: deps()
     ]
   end
@@ -15,7 +15,8 @@ defmodule ScssEx.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger],
+      mod: {ScssEx, []}
     ]
   end
 
@@ -25,9 +26,5 @@ defmodule ScssEx.MixProject do
       {:protobuf, "~> 0.7.1"},
       {:google_protos, "~> 0.1"}
     ]
-  end
-
-  defp escript do
-    [main_module: ScssEx]
   end
 end

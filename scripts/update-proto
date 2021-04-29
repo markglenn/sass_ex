@@ -1,0 +1,3 @@
+#!/bin/sh
+
+curl https://raw.githubusercontent.com/sass/embedded-protocol/master/embedded_sass.proto --output embedded_sass.proto
