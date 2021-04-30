@@ -1,11 +1,11 @@
-defmodule ScssEx do
+defmodule SassEx do
   @moduledoc """
-  Documentation for `ScssEx`.
+  Documentation for `SassEx`.
   """
 
   use Application
 
-  alias ScssEx.SassProcessor
+  alias SassEx.SassProcessor
 
   def compile(content \\ ".hello { color: red; }") do
     SassProcessor.compile(SassProcessor, content)
@@ -14,9 +14,9 @@ defmodule ScssEx do
   def start(_type, _args) do
     children = [
       # Define workers and child supervisors to be supervised
-      {ScssEx.SassProcessor, importers: [ScssEx.Importer.FileImporter]}
+      {SassEx.SassProcessor, importers: [SassEx.Importer.FileImporter]}
     ]
 
-    Supervisor.start_link(children, strategy: :one_for_one, name: ScssEx)
+    Supervisor.start_link(children, strategy: :one_for_one, name: SassEx)
   end
 end

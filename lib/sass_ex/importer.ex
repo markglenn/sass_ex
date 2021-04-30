@@ -1,4 +1,4 @@
-defmodule ScssEx.Importer do
+defmodule SassEx.Importer do
   @doc """
   Convert a filename into a URI
 

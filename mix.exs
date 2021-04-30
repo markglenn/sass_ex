@@ -1,9 +1,9 @@
-defmodule ScssEx.MixProject do
+defmodule SassEx.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :scss_ex,
+      app: :sass_ex,
       version: "0.1.0",
       elixir: "~> 1.11",
       # Mix.env() == :prod,
@@ -16,7 +16,7 @@ defmodule ScssEx.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      mod: {ScssEx, []}
+      mod: {SassEx, []}
     ]
   end
 

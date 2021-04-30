@@ -1,4 +1,4 @@
-defmodule ScssEx.Processor.OpenRequest do
+defmodule SassEx.Processor.OpenRequest do
   @moduledoc """
   Contains information on an open request for compiling a SCSS document
   """

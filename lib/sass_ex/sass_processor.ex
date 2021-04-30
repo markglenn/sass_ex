@@ -1,4 +1,4 @@
-defmodule ScssEx.SassProcessor do
+defmodule SassEx.SassProcessor do
   use GenServer
   require Logger
 
@@ -7,8 +7,8 @@ defmodule ScssEx.SassProcessor do
   alias Sass.EmbeddedProtocol.InboundMessage
   alias Sass.EmbeddedProtocol.OutboundMessage
 
-  alias ScssEx.Processor.Packet
-  alias ScssEx.Processor.OpenRequest
+  alias SassEx.Processor.Packet
+  alias SassEx.Processor.OpenRequest
 
   def child_spec(arg) do
     %{
@@ -111,12 +111,7 @@ defmodule ScssEx.SassProcessor do
   end
 
   defp send_message(%{port: port}, type, message) do
-    msg =
-      %{message: {type, message}}
-      |> InboundMessage.new()
-      |> InboundMessage.encode()
-
-    Port.command(port, <<byte_size(msg)>> <> msg)
+    Port.command(port, Packet.encode(type, message))
   end
 
   defp handle_packet(

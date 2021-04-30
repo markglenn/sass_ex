@@ -1,4 +1,4 @@
-defmodule ScssExTest do
+defmodule SassExTest do
   use ExUnit.Case
-  doctest ScssEx
+  doctest SassEx
 end

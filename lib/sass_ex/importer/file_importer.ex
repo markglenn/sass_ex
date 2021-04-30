@@ -1,5 +1,5 @@
-defmodule ScssEx.Importer.FileImporter do
-  @behaviour ScssEx.Importer
+defmodule SassEx.Importer.FileImporter do
+  @behaviour SassEx.Importer
 
   @spec canonicalize(any, binary) :: {:ok, String.t()}
   def canonicalize(_, path), do: {:ok, "file:///" <> path}

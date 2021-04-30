@@ -20,11 +20,10 @@ erl_crash.dump
 *.ez
 
 # Ignore package tarball (built via "mix hex.build").
-scss_ex-*.tar
+sass_ex-*.tar
 
 
 # Temporary files for e.g. tests
 /tmp
 
 .elixir_ls
-/scss_ex
