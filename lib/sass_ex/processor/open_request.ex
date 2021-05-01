@@ -3,10 +3,13 @@ defmodule SassEx.Processor.OpenRequest do
   Contains information on an open request for compiling a SCSS document
   """
 
-  defstruct [:id, :pid]
+  defstruct [:id, :pid, :importers]
+
+  @type importer_t :: Module | Struct
 
   @type t :: %__MODULE__{
           id: integer,
-          pid: pid()
+          pid: GenServer.from(),
+          importers: [importer_t()]
         }
 end

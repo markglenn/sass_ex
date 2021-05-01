@@ -7,9 +7,8 @@ defmodule SassEx do
 
   alias SassEx.SassProcessor
 
-  def compile(content \\ ".hello { color: red; }") do
-    SassProcessor.compile(SassProcessor, content)
-  end
+  def compile(content \\ ".hello { color: red; }", importers \\ []),
+    do: SassProcessor.compile(SassProcessor, content, importers)
 
   def start(_type, _args) do
     children = [

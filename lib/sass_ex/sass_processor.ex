@@ -20,8 +20,7 @@ defmodule SassEx.SassProcessor do
   @type state_t :: %{
           port: port,
           buffer: binary,
-          requests: %{optional(pos_integer) => Request.t()},
-          importers: %{optional(pos_integer) => Module | Struct}
+          requests: %{optional(pos_integer) => OpenRequest.t()}
         }
 
   # GenServer API
@@ -32,30 +31,18 @@ defmodule SassEx.SassProcessor do
   end
 
   @spec init(any) :: {:ok, state_t}
-  def init(opts) do
-    importers =
-      Keyword.get(opts, :importers, [])
-      |> Enum.with_index(1)
-      |> Map.new(&{elem(&1, 1), elem(&1, 0)})
-
+  def init(_opts) do
     port = Port.open({:spawn, @command}, [:binary, :exit_status])
 
-    state = %{
-      port: port,
-      buffer: <<>>,
-      requests: %{},
-      importers: importers
-    }
-
-    {:ok, state}
+    {:ok, %{port: port, buffer: <<>>, requests: %{}}}
   end
 
-  @spec compile(GenServer.server(), String.t()) :: term
-  def compile(pid, body), do: GenServer.call(pid, {:compile, body})
+  @spec compile(GenServer.server(), String.t(), [OpenRequest.importer_t()]) :: term
+  def compile(pid, body, importers \\ []), do: GenServer.call(pid, {:compile, body, importers})
 
-  def handle_call({:compile, body}, from, state) do
+  def handle_call({:compile, body, importers}, from, state) do
     input = InboundMessage.CompileRequest.StringInput.new(%{source: body})
-    request = %OpenRequest{id: unique_id(), pid: from}
+    request = %OpenRequest{id: unique_id(state), pid: from, importers: importers}
 
     message =
       InboundMessage.CompileRequest.new(%{
@@ -63,7 +50,7 @@ defmodule SassEx.SassProcessor do
         id: request.id,
         source_map: true,
         style: :EXPANDED,
-        importers: importers(state)
+        importers: importers(importers)
       })
 
     send_message(state, :compileRequest, message)
@@ -95,7 +82,7 @@ defmodule SassEx.SassProcessor do
   def handle_info({_port, {:exit_status, status}}, state) do
     Logger.info("External exit: :exit_status: #{status}")
 
-    # Our process as stopped, so we should kill this GenServer
+    # Our process is stopped, so we should kill this GenServer
     {:stop, :normal, state}
   end
 
@@ -116,37 +103,27 @@ defmodule SassEx.SassProcessor do
 
   defp handle_packet(
          state,
-         %OutboundMessage.CompileResponse{id: id, result: {:success, packet}}
+         %OutboundMessage.CompileResponse{id: id, result: {_, packet}}
        ) do
     case Map.get(state.requests, id) do
-      nil ->
-        state
-
       %OpenRequest{pid: pid} ->
         GenServer.reply(pid, packet)
-        Map.delete(state.requests, id)
-    end
-  end
+        %{state | requests: Map.delete(state.requests, id)}
 
-  defp handle_packet(state, %OutboundMessage.CompileResponse{id: id, result: {:failure, packet}}) do
-    case Map.get(state.requests, id) do
-      nil ->
+      _ ->
         state
-
-      %OpenRequest{pid: pid} ->
-        GenServer.reply(pid, packet)
-        Map.delete(state.requests, id)
     end
   end
 
   defp handle_packet(state, %OutboundMessage.CanonicalizeRequest{
          id: id,
          importer_id: importer_id,
+         compilation_id: compilation_id,
          url: url
        }) do
     result =
-      state.importers
-      |> Map.get(importer_id)
+      state
+      |> importer_for(compilation_id, importer_id)
       |> canonicalize_url(url)
       |> case do
         {:ok, url} -> {:url, url}
@@ -161,19 +138,21 @@ defmodule SassEx.SassProcessor do
   end
 
   defp handle_packet(state, %OutboundMessage.ImportRequest{} = request) do
+    alias Sass.EmbeddedProtocol.InboundMessage.ImportResponse
+
     result =
-      state.importers
-      |> Map.get(request.importer_id)
+      state
+      |> importer_for(request.compilation_id, request.importer_id)
       |> load_contents(request.url)
       |> case do
         {:ok, contents} ->
-          {:success, InboundMessage.ImportResponse.ImportSuccess.new(%{contents: contents})}
+          {:success, ImportResponse.ImportSuccess.new(%{contents: contents})}
 
         {:error, error} ->
           {:error, error}
       end
 
-    message = InboundMessage.ImportResponse.new(%{result: result, id: request.id})
+    message = ImportResponse.new(%{result: result, id: request.id})
     send_message(state, :importResponse, message)
     state
   end
@@ -192,13 +171,32 @@ defmodule SassEx.SassProcessor do
   defp load_contents(%module{} = importer, url), do: module.load(importer, url)
   defp load_contents(module, url), do: module.load(nil, url)
 
-  defp unique_id, do: System.unique_integer([:positive])
+  defp unique_id(%{requests: requests} = state) do
+    id = rem(System.unique_integer([:positive]), 4_294_967_295)
 
-  @spec importers(state_t) :: [InboundMessage.CompileRequest.Importer.t()]
-  defp importers(%{importers: importers}) do
-    importers
-    |> Enum.map(fn {k, _} ->
-      InboundMessage.CompileRequest.Importer.new(%{importer: {:importer_id, k}})
-    end)
+    if Map.has_key?(requests, id) do
+      unique_id(state)
+    else
+      id
+    end
+  end
+
+  @spec importers(any) :: [InboundMessage.CompileRequest.Importer.t()]
+  defp importers([]), do: []
+
+  defp importers(importers) do
+    alias InboundMessage.CompileRequest.Importer
+
+    importer_count = length(importers)
+
+    0..(importer_count - 1)
+    |> Enum.map(&Importer.new(%{importer: {:importer_id, &1}}))
+  end
+
+  defp importer_for(%{requests: requests}, compilation_id, importer_id) do
+    requests
+    |> Map.get(compilation_id, %{})
+    |> Map.get(:importers, [])
+    |> Enum.at(importer_id)
   end
 end
