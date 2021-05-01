@@ -6,7 +6,7 @@ defmodule SassEx.Importer do
 
   e.g. "example.scss" -> "file:///example.scss"
   """
-  @callback canonicalize(struct | nil, String.t()) :: result_t
+  @callback canonicalize(struct | nil, String.t()) :: result_t | nil
 
   @doc """
   Load a URI from the importer

@@ -1,6 +1,6 @@
 defmodule SassEx.SassProcessor do
   use GenServer
-  require Logger
+  # require Logger
 
   @command "./vendor/sass_embedded/dart-sass-embedded"
 
@@ -10,6 +10,8 @@ defmodule SassEx.SassProcessor do
   alias SassEx.Processor.Packet
   alias SassEx.Processor.OpenRequest
 
+  alias InboundMessage.CompileRequest.Importer
+
   def child_spec(arg) do
     %{
       id: __MODULE__,
@@ -18,9 +20,10 @@ defmodule SassEx.SassProcessor do
   end
 
   @type state_t :: %{
-          port: port,
+          port: port | nil,
           buffer: binary,
-          requests: %{optional(pos_integer) => OpenRequest.t()}
+          requests: %{optional(pos_integer) => OpenRequest.t()},
+          last_request_id: non_neg_integer()
         }
 
   # GenServer API
@@ -32,17 +35,41 @@ defmodule SassEx.SassProcessor do
 
   @spec init(any) :: {:ok, state_t}
   def init(_opts) do
-    port = Port.open({:spawn, @command}, [:binary, :exit_status])
+    port = Port.open({:spawn_executable, @command}, [:binary, :exit_status])
 
-    {:ok, %{port: port, buffer: <<>>, requests: %{}}}
+    {:ok, %{port: port, buffer: <<>>, requests: %{}, last_request_id: 0}}
   end
 
-  @spec compile(GenServer.server(), String.t(), [OpenRequest.importer_t()]) :: term
-  def compile(pid, body, importers \\ []), do: GenServer.call(pid, {:compile, body, importers})
+  @spec compile(GenServer.server(), String.t(), [OpenRequest.importer_t()] | nil) :: term
+  def compile(pid, body, importers),
+    do: GenServer.call(pid, {:compile, body, importers}, 2000)
+
+  def handle_call(:close, _from, %{port: port} = state) do
+    Port.close(port)
+
+    {:ok, :ok, %{state | port: nil}}
+  end
 
   def handle_call({:compile, body, importers}, from, state) do
-    input = InboundMessage.CompileRequest.StringInput.new(%{source: body})
-    request = %OpenRequest{id: unique_id(state), pid: from, importers: importers}
+    alias InboundMessage.CompileRequest.StringInput
+
+    # Use the default importer or the first given
+    relative_importer =
+      case importers do
+        nil -> nil
+        [path | _] when is_binary(path) -> Importer.new(%{importer: {:path, path}})
+        _ -> Importer.new(%{importer: {:importer_id, 0}})
+      end
+
+    input = StringInput.new(%{source: body, importer: relative_importer})
+
+    state = %{state | last_request_id: state.last_request_id + 1}
+
+    request = %OpenRequest{
+      id: state.last_request_id,
+      pid: from,
+      importers: importers
+    }
 
     message =
       InboundMessage.CompileRequest.new(%{
@@ -59,28 +86,14 @@ defmodule SassEx.SassProcessor do
   end
 
   # This callback handles data incoming from the command's STDOUT
-  def handle_info({_pid, {:data, data}}, state) do
-    buffer = state.buffer <> data
-
-    case Packet.parse(buffer) do
-      :incomplete ->
-        {:noreply, %{state | buffer: buffer}}
-
-      {:ok, body, rest} ->
-        %{message: {_, message}} = OutboundMessage.decode(body)
-
-        state =
-          state
-          |> handle_packet(message)
-          |> Map.put(:buffer, rest)
-
-        {:noreply, state}
-    end
+  def handle_info({_port, {:data, data}}, state) do
+    %{state | buffer: state.buffer <> data}
+    |> parse_packet()
   end
 
   # This callback tells us when the process exits
   def handle_info({_port, {:exit_status, status}}, state) do
-    Logger.info("External exit: :exit_status: #{status}")
+    IO.inspect("External exit: :exit_status: #{status}")
 
     # Our process is stopped, so we should kill this GenServer
     {:stop, :normal, state}
@@ -88,8 +101,23 @@ defmodule SassEx.SassProcessor do
 
   # no-op catch-all callback for unhandled messages
   def handle_info(msg, state) do
-    Logger.info("Invalid message received: #{inspect(msg)}")
+    IO.inspect("Invalid message received: #{inspect(msg)}")
     {:noreply, state}
+  end
+
+  def parse_packet(state) do
+    case Packet.parse(state.buffer) do
+      :incomplete ->
+        {:noreply, state}
+
+      {:ok, body, rest} ->
+        %{message: {_, message}} = OutboundMessage.decode(body)
+
+        state
+        |> handle_packet(message)
+        |> Map.put(:buffer, rest)
+        |> parse_packet()
+    end
   end
 
   def terminate(_reason, %{port: port}) do
@@ -98,7 +126,7 @@ defmodule SassEx.SassProcessor do
   end
 
   defp send_message(%{port: port}, type, message) do
-    Port.command(port, Packet.encode(type, message))
+    true = Port.command(port, Packet.encode(type, message), [:nosuspend])
   end
 
   defp handle_packet(
@@ -108,6 +136,7 @@ defmodule SassEx.SassProcessor do
     case Map.get(state.requests, id) do
       %OpenRequest{pid: pid} ->
         GenServer.reply(pid, packet)
+
         %{state | requests: Map.delete(state.requests, id)}
 
       _ ->
@@ -127,7 +156,7 @@ defmodule SassEx.SassProcessor do
       |> canonicalize_url(url)
       |> case do
         {:ok, url} -> {:url, url}
-        {:error, _} = r -> r
+        r -> r
       end
 
     message = InboundMessage.CanonicalizeResponse.new(%{id: id, result: result})
@@ -158,7 +187,7 @@ defmodule SassEx.SassProcessor do
   end
 
   defp handle_packet(state, response) do
-    Logger.info("Unknown message received from SASS compiler: #{inspect(response)}")
+    IO.inspect("Unknown message received from SASS compiler: #{inspect(response)}")
 
     state
   end
@@ -171,26 +200,15 @@ defmodule SassEx.SassProcessor do
   defp load_contents(%module{} = importer, url), do: module.load(importer, url)
   defp load_contents(module, url), do: module.load(nil, url)
 
-  defp unique_id(%{requests: requests} = state) do
-    id = rem(System.unique_integer([:positive]), 4_294_967_295)
-
-    if Map.has_key?(requests, id) do
-      unique_id(state)
-    else
-      id
-    end
-  end
-
   @spec importers(any) :: [InboundMessage.CompileRequest.Importer.t()]
-  defp importers([]), do: []
+  defp importers(nil), do: []
 
   defp importers(importers) do
-    alias InboundMessage.CompileRequest.Importer
-
-    importer_count = length(importers)
-
-    0..(importer_count - 1)
-    |> Enum.map(&Importer.new(%{importer: {:importer_id, &1}}))
+    importers
+    |> Enum.with_index()
+    |> Enum.map(&to_sass_importer/1)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.map(&Importer.new(%{importer: &1}))
   end
 
   defp importer_for(%{requests: requests}, compilation_id, importer_id) do
@@ -199,4 +217,6 @@ defmodule SassEx.SassProcessor do
     |> Map.get(:importers, [])
     |> Enum.at(importer_id)
   end
+
+  defp to_sass_importer({_, id}), do: {:importer_id, id}
 end
