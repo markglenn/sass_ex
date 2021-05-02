@@ -27,3 +27,4 @@ sass_ex-*.tar
 /tmp
 
 .elixir_ls
+.DS_Store

@@ -2,15 +2,14 @@ defmodule SassEx.SassProcessor do
   use GenServer
   # require Logger
 
-  @command "./vendor/sass_embedded/dart-sass-embedded"
+  @macos_command "./vendor/sass_embedded/macos/dart-sass-embedded"
+  @linux64_command "./vendor/sass_embedded/linux64/dart-sass-embedded"
+  @win64_command "./vendor/sass_embedded/win64/dart-sass-embedded.bat"
 
-  alias Sass.EmbeddedProtocol.InboundMessage
-  alias Sass.EmbeddedProtocol.OutboundMessage
+  alias Sass.EmbeddedProtocol.{InboundMessage, OutboundMessage}
+  alias Sass.EmbeddedProtocol.InboundMessage.CompileRequest.Importer
 
-  alias SassEx.Processor.Packet
-  alias SassEx.Processor.OpenRequest
-
-  alias InboundMessage.CompileRequest.Importer
+  alias SassEx.Processor.{Packet, OpenRequest}
 
   def child_spec(arg) do
     %{
@@ -35,7 +34,14 @@ defmodule SassEx.SassProcessor do
 
   @spec init(any) :: {:ok, state_t}
   def init(_opts) do
-    port = Port.open({:spawn_executable, @command}, [:binary, :exit_status])
+    command =
+      case :os.type() do
+        {:unix, :darwin} -> @macos_command
+        {:unix, _} -> @linux64_command
+        {:win32, _} -> @win64_command
+      end
+
+    port = Port.open({:spawn_executable, command}, [:binary, :exit_status])
 
     {:ok, %{port: port, buffer: <<>>, requests: %{}, last_request_id: 0}}
   end
@@ -105,7 +111,8 @@ defmodule SassEx.SassProcessor do
     {:noreply, state}
   end
 
-  def parse_packet(state) do
+  @spec parse_packet(state_t) :: {:noreply, state_t}
+  defp parse_packet(state) do
     case Packet.parse(state.buffer) do
       :incomplete ->
         {:noreply, state}
@@ -120,14 +127,14 @@ defmodule SassEx.SassProcessor do
     end
   end
 
+  @spec terminate(term, state_t) :: :ok
   def terminate(_reason, %{port: port}) do
     Port.close(port)
     :ok
   end
 
-  defp send_message(%{port: port}, type, message) do
-    true = Port.command(port, Packet.encode(type, message), [:nosuspend])
-  end
+  defp send_message(%{port: port}, type, message),
+    do: Port.command(port, Packet.encode(type, message))
 
   defp handle_packet(
          state,
@@ -168,6 +175,7 @@ defmodule SassEx.SassProcessor do
 
   defp handle_packet(state, %OutboundMessage.ImportRequest{} = request) do
     alias Sass.EmbeddedProtocol.InboundMessage.ImportResponse
+    alias Sass.EmbeddedProtocol.InboundMessage.ImportResponse.ImportSuccess
 
     result =
       state
@@ -175,7 +183,7 @@ defmodule SassEx.SassProcessor do
       |> load_contents(request.url)
       |> case do
         {:ok, contents} ->
-          {:success, ImportResponse.ImportSuccess.new(%{contents: contents})}
+          {:success, ImportSuccess.new(%{contents: contents})}
 
         {:error, error} ->
           {:error, error}
@@ -200,15 +208,15 @@ defmodule SassEx.SassProcessor do
   defp load_contents(%module{} = importer, url), do: module.load(importer, url)
   defp load_contents(module, url), do: module.load(nil, url)
 
-  @spec importers(any) :: [InboundMessage.CompileRequest.Importer.t()]
+  @spec importers([OpenRequest.importer_t()] | nil) :: [
+          InboundMessage.CompileRequest.Importer.t()
+        ]
   defp importers(nil), do: []
 
   defp importers(importers) do
     importers
     |> Enum.with_index()
-    |> Enum.map(&to_sass_importer/1)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.map(&Importer.new(%{importer: &1}))
+    |> Enum.map(&Importer.new(%{importer: {:importer_id, elem(&1, 1)}}))
   end
 
   defp importer_for(%{requests: requests}, compilation_id, importer_id) do
@@ -217,6 +225,4 @@ defmodule SassEx.SassProcessor do
     |> Map.get(:importers, [])
     |> Enum.at(importer_id)
   end
-
-  defp to_sass_importer({_, id}), do: {:importer_id, id}
 end
