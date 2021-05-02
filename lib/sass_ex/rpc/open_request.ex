@@ -1,6 +1,6 @@
-defmodule SassEx.Processor.OpenRequest do
+defmodule SassEx.RPC.OpenRequest do
   @moduledoc """
-  Contains information on an open request for compiling a SCSS document
+  Contains information on an open request for compiling a Sass/SCSS document
   """
 
   defstruct [:id, :pid, :importers]

@@ -1,7 +1,7 @@
-defmodule SassEx.Processor.LEB128Test do
+defmodule SassEx.RPC.LEB128Test do
   use ExUnit.Case
 
-  alias SassEx.Processor.LEB128
+  alias SassEx.RPC.LEB128
 
   test "Calculates the length of a packet" do
     assert LEB128.decode(<<1, 0, 1>>) == {:ok, 1, <<0, 1>>}

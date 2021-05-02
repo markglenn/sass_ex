@@ -1,4 +1,8 @@
 defmodule SassEx.Importer do
+  @moduledoc """
+  Definies the behaviour for a custom Sass importer
+  """
+
   @type result_t :: {:ok, String.t()} | {:error, String.t()}
 
   @doc """

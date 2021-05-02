@@ -17,8 +17,8 @@ defmodule SassExTest do
   end
 
   alias Sass.EmbeddedProtocol.OutboundMessage.CompileResponse.{
-    CompileSuccess,
-    CompileFailure
+    CompileFailure,
+    CompileSuccess
   }
 
   test "handle simple CSS" do

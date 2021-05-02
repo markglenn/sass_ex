@@ -3,11 +3,11 @@ defmodule Sass.EmbeddedProtocol.InboundMessage.Syntax do
   use Protobuf, enum: true, syntax: :proto3
   @type t :: integer | :SCSS | :INDENTED | :CSS
 
-  field :SCSS, 0
+  field(:SCSS, 0)
 
-  field :INDENTED, 1
+  field(:INDENTED, 1)
 
-  field :CSS, 2
+  field(:CSS, 2)
 end
 
 defmodule Sass.EmbeddedProtocol.InboundMessage.CompileRequest.OutputStyle do
@@ -15,9 +15,9 @@ defmodule Sass.EmbeddedProtocol.InboundMessage.CompileRequest.OutputStyle do
   use Protobuf, enum: true, syntax: :proto3
   @type t :: integer | :EXPANDED | :COMPRESSED
 
-  field :EXPANDED, 0
+  field(:EXPANDED, 0)
 
-  field :COMPRESSED, 1
+  field(:COMPRESSED, 1)
 end
 
 defmodule Sass.EmbeddedProtocol.OutboundMessage.LogEvent.Type do
@@ -25,11 +25,11 @@ defmodule Sass.EmbeddedProtocol.OutboundMessage.LogEvent.Type do
   use Protobuf, enum: true, syntax: :proto3
   @type t :: integer | :WARNING | :DEPRECATION_WARNING | :DEBUG
 
-  field :WARNING, 0
+  field(:WARNING, 0)
 
-  field :DEPRECATION_WARNING, 1
+  field(:DEPRECATION_WARNING, 1)
 
-  field :DEBUG, 2
+  field(:DEBUG, 2)
 end
 
 defmodule Sass.EmbeddedProtocol.ProtocolError.ErrorType do
@@ -37,11 +37,11 @@ defmodule Sass.EmbeddedProtocol.ProtocolError.ErrorType do
   use Protobuf, enum: true, syntax: :proto3
   @type t :: integer | :PARSE | :PARAMS | :INTERNAL
 
-  field :PARSE, 0
+  field(:PARSE, 0)
 
-  field :PARAMS, 1
+  field(:PARAMS, 1)
 
-  field :INTERNAL, 2
+  field(:INTERNAL, 2)
 end
 
 defmodule Sass.EmbeddedProtocol.Value.Singleton do
@@ -49,11 +49,11 @@ defmodule Sass.EmbeddedProtocol.Value.Singleton do
   use Protobuf, enum: true, syntax: :proto3
   @type t :: integer | :TRUE | :FALSE | :NULL
 
-  field :TRUE, 0
+  field(:TRUE, 0)
 
-  field :FALSE, 1
+  field(:FALSE, 1)
 
-  field :NULL, 2
+  field(:NULL, 2)
 end
 
 defmodule Sass.EmbeddedProtocol.Value.List.Separator do
@@ -61,13 +61,13 @@ defmodule Sass.EmbeddedProtocol.Value.List.Separator do
   use Protobuf, enum: true, syntax: :proto3
   @type t :: integer | :COMMA | :SPACE | :SLASH | :UNDECIDED
 
-  field :COMMA, 0
+  field(:COMMA, 0)
 
-  field :SPACE, 1
+  field(:SPACE, 1)
 
-  field :SLASH, 2
+  field(:SLASH, 2)
 
-  field :UNDECIDED, 3
+  field(:UNDECIDED, 3)
 end
 
 defmodule Sass.EmbeddedProtocol.InboundMessage.VersionRequest do
@@ -91,10 +91,10 @@ defmodule Sass.EmbeddedProtocol.InboundMessage.CompileRequest.StringInput do
 
   defstruct [:source, :url, :syntax, :importer]
 
-  field :source, 1, type: :string
-  field :url, 2, type: :string
-  field :syntax, 3, type: Sass.EmbeddedProtocol.InboundMessage.Syntax, enum: true
-  field :importer, 4, type: Sass.EmbeddedProtocol.InboundMessage.CompileRequest.Importer
+  field(:source, 1, type: :string)
+  field(:url, 2, type: :string)
+  field(:syntax, 3, type: Sass.EmbeddedProtocol.InboundMessage.Syntax, enum: true)
+  field(:importer, 4, type: Sass.EmbeddedProtocol.InboundMessage.CompileRequest.Importer)
 end
 
 defmodule Sass.EmbeddedProtocol.InboundMessage.CompileRequest.Importer do
@@ -107,10 +107,10 @@ defmodule Sass.EmbeddedProtocol.InboundMessage.CompileRequest.Importer do
 
   defstruct [:importer]
 
-  oneof :importer, 0
-  field :path, 1, type: :string, oneof: 0
-  field :importer_id, 2, type: :uint32, oneof: 0
-  field :file_importer_id, 3, type: :uint32, oneof: 0
+  oneof(:importer, 0)
+  field(:path, 1, type: :string, oneof: 0)
+  field(:importer_id, 2, type: :uint32, oneof: 0)
+  field(:file_importer_id, 3, type: :uint32, oneof: 0)
 end
 
 defmodule Sass.EmbeddedProtocol.InboundMessage.CompileRequest do
@@ -139,28 +139,31 @@ defmodule Sass.EmbeddedProtocol.InboundMessage.CompileRequest do
     :alert_ascii
   ]
 
-  oneof :input, 0
-  field :id, 1, type: :uint32
+  oneof(:input, 0)
+  field(:id, 1, type: :uint32)
 
-  field :string, 2,
+  field(:string, 2,
     type: Sass.EmbeddedProtocol.InboundMessage.CompileRequest.StringInput,
     oneof: 0
+  )
 
-  field :path, 3, type: :string, oneof: 0
+  field(:path, 3, type: :string, oneof: 0)
 
-  field :style, 4,
+  field(:style, 4,
     type: Sass.EmbeddedProtocol.InboundMessage.CompileRequest.OutputStyle,
     enum: true
+  )
 
-  field :source_map, 5, type: :bool
+  field(:source_map, 5, type: :bool)
 
-  field :importers, 6,
+  field(:importers, 6,
     repeated: true,
     type: Sass.EmbeddedProtocol.InboundMessage.CompileRequest.Importer
+  )
 
-  field :global_functions, 7, repeated: true, type: :string
-  field :alert_color, 8, type: :bool
-  field :alert_ascii, 9, type: :bool
+  field(:global_functions, 7, repeated: true, type: :string)
+  field(:alert_color, 8, type: :bool)
+  field(:alert_ascii, 9, type: :bool)
 end
 
 defmodule Sass.EmbeddedProtocol.InboundMessage.CanonicalizeResponse do
@@ -174,10 +177,10 @@ defmodule Sass.EmbeddedProtocol.InboundMessage.CanonicalizeResponse do
 
   defstruct [:result, :id]
 
-  oneof :result, 0
-  field :id, 1, type: :uint32
-  field :url, 2, type: :string, oneof: 0
-  field :error, 3, type: :string, oneof: 0
+  oneof(:result, 0)
+  field(:id, 1, type: :uint32)
+  field(:url, 2, type: :string, oneof: 0)
+  field(:error, 3, type: :string, oneof: 0)
 end
 
 defmodule Sass.EmbeddedProtocol.InboundMessage.ImportResponse.ImportSuccess do
@@ -192,9 +195,9 @@ defmodule Sass.EmbeddedProtocol.InboundMessage.ImportResponse.ImportSuccess do
 
   defstruct [:contents, :syntax, :sourceMapUrl]
 
-  field :contents, 1, type: :string
-  field :syntax, 2, type: Sass.EmbeddedProtocol.InboundMessage.Syntax, enum: true
-  field :sourceMapUrl, 3, type: :string
+  field(:contents, 1, type: :string)
+  field(:syntax, 2, type: Sass.EmbeddedProtocol.InboundMessage.Syntax, enum: true)
+  field(:sourceMapUrl, 3, type: :string)
 end
 
 defmodule Sass.EmbeddedProtocol.InboundMessage.ImportResponse do
@@ -208,14 +211,15 @@ defmodule Sass.EmbeddedProtocol.InboundMessage.ImportResponse do
 
   defstruct [:result, :id]
 
-  oneof :result, 0
-  field :id, 1, type: :uint32
+  oneof(:result, 0)
+  field(:id, 1, type: :uint32)
 
-  field :success, 2,
+  field(:success, 2,
     type: Sass.EmbeddedProtocol.InboundMessage.ImportResponse.ImportSuccess,
     oneof: 0
+  )
 
-  field :error, 3, type: :string, oneof: 0
+  field(:error, 3, type: :string, oneof: 0)
 end
 
 defmodule Sass.EmbeddedProtocol.InboundMessage.FileImportResponse do
@@ -229,10 +233,10 @@ defmodule Sass.EmbeddedProtocol.InboundMessage.FileImportResponse do
 
   defstruct [:result, :id]
 
-  oneof :result, 0
-  field :id, 1, type: :uint32
-  field :file_url, 2, type: :string, oneof: 0
-  field :error, 3, type: :string, oneof: 0
+  oneof(:result, 0)
+  field(:id, 1, type: :uint32)
+  field(:file_url, 2, type: :string, oneof: 0)
+  field(:error, 3, type: :string, oneof: 0)
 end
 
 defmodule Sass.EmbeddedProtocol.InboundMessage.FunctionCallResponse do
@@ -246,10 +250,10 @@ defmodule Sass.EmbeddedProtocol.InboundMessage.FunctionCallResponse do
 
   defstruct [:result, :id]
 
-  oneof :result, 0
-  field :id, 1, type: :uint32
-  field :success, 2, type: Sass.EmbeddedProtocol.Value, oneof: 0
-  field :error, 3, type: :string, oneof: 0
+  oneof(:result, 0)
+  field(:id, 1, type: :uint32)
+  field(:success, 2, type: Sass.EmbeddedProtocol.Value, oneof: 0)
+  field(:error, 3, type: :string, oneof: 0)
 end
 
 defmodule Sass.EmbeddedProtocol.InboundMessage do
@@ -262,24 +266,27 @@ defmodule Sass.EmbeddedProtocol.InboundMessage do
 
   defstruct [:message]
 
-  oneof :message, 0
-  field :compileRequest, 2, type: Sass.EmbeddedProtocol.InboundMessage.CompileRequest, oneof: 0
+  oneof(:message, 0)
+  field(:compileRequest, 2, type: Sass.EmbeddedProtocol.InboundMessage.CompileRequest, oneof: 0)
 
-  field :canonicalizeResponse, 3,
+  field(:canonicalizeResponse, 3,
     type: Sass.EmbeddedProtocol.InboundMessage.CanonicalizeResponse,
     oneof: 0
+  )
 
-  field :importResponse, 4, type: Sass.EmbeddedProtocol.InboundMessage.ImportResponse, oneof: 0
+  field(:importResponse, 4, type: Sass.EmbeddedProtocol.InboundMessage.ImportResponse, oneof: 0)
 
-  field :fileImportResponse, 5,
+  field(:fileImportResponse, 5,
     type: Sass.EmbeddedProtocol.InboundMessage.FileImportResponse,
     oneof: 0
+  )
 
-  field :functionCallResponse, 6,
+  field(:functionCallResponse, 6,
     type: Sass.EmbeddedProtocol.InboundMessage.FunctionCallResponse,
     oneof: 0
+  )
 
-  field :versionRequest, 7, type: Sass.EmbeddedProtocol.InboundMessage.VersionRequest, oneof: 0
+  field(:versionRequest, 7, type: Sass.EmbeddedProtocol.InboundMessage.VersionRequest, oneof: 0)
 end
 
 defmodule Sass.EmbeddedProtocol.OutboundMessage.VersionResponse do
@@ -295,10 +302,10 @@ defmodule Sass.EmbeddedProtocol.OutboundMessage.VersionResponse do
 
   defstruct [:protocol_version, :compiler_version, :implementation_version, :implementation_name]
 
-  field :protocol_version, 1, type: :string
-  field :compiler_version, 2, type: :string
-  field :implementation_version, 3, type: :string
-  field :implementation_name, 4, type: :string
+  field(:protocol_version, 1, type: :string)
+  field(:compiler_version, 2, type: :string)
+  field(:implementation_version, 3, type: :string)
+  field(:implementation_name, 4, type: :string)
 end
 
 defmodule Sass.EmbeddedProtocol.OutboundMessage.CompileResponse.CompileSuccess do
@@ -312,8 +319,8 @@ defmodule Sass.EmbeddedProtocol.OutboundMessage.CompileResponse.CompileSuccess d
 
   defstruct [:css, :source_map]
 
-  field :css, 1, type: :string
-  field :source_map, 2, type: :string
+  field(:css, 1, type: :string)
+  field(:source_map, 2, type: :string)
 end
 
 defmodule Sass.EmbeddedProtocol.OutboundMessage.CompileResponse.CompileFailure do
@@ -329,10 +336,10 @@ defmodule Sass.EmbeddedProtocol.OutboundMessage.CompileResponse.CompileFailure d
 
   defstruct [:message, :span, :stack_trace, :formatted]
 
-  field :message, 1, type: :string
-  field :span, 2, type: Sass.EmbeddedProtocol.SourceSpan
-  field :stack_trace, 3, type: :string
-  field :formatted, 4, type: :string
+  field(:message, 1, type: :string)
+  field(:span, 2, type: Sass.EmbeddedProtocol.SourceSpan)
+  field(:stack_trace, 3, type: :string)
+  field(:formatted, 4, type: :string)
 end
 
 defmodule Sass.EmbeddedProtocol.OutboundMessage.CompileResponse do
@@ -346,16 +353,18 @@ defmodule Sass.EmbeddedProtocol.OutboundMessage.CompileResponse do
 
   defstruct [:result, :id]
 
-  oneof :result, 0
-  field :id, 1, type: :uint32
+  oneof(:result, 0)
+  field(:id, 1, type: :uint32)
 
-  field :success, 2,
+  field(:success, 2,
     type: Sass.EmbeddedProtocol.OutboundMessage.CompileResponse.CompileSuccess,
     oneof: 0
+  )
 
-  field :failure, 3,
+  field(:failure, 3,
     type: Sass.EmbeddedProtocol.OutboundMessage.CompileResponse.CompileFailure,
     oneof: 0
+  )
 end
 
 defmodule Sass.EmbeddedProtocol.OutboundMessage.LogEvent do
@@ -373,12 +382,12 @@ defmodule Sass.EmbeddedProtocol.OutboundMessage.LogEvent do
 
   defstruct [:compilation_id, :type, :message, :span, :stack_trace, :formatted]
 
-  field :compilation_id, 1, type: :uint32
-  field :type, 2, type: Sass.EmbeddedProtocol.OutboundMessage.LogEvent.Type, enum: true
-  field :message, 3, type: :string
-  field :span, 4, type: Sass.EmbeddedProtocol.SourceSpan
-  field :stack_trace, 5, type: :string
-  field :formatted, 6, type: :string
+  field(:compilation_id, 1, type: :uint32)
+  field(:type, 2, type: Sass.EmbeddedProtocol.OutboundMessage.LogEvent.Type, enum: true)
+  field(:message, 3, type: :string)
+  field(:span, 4, type: Sass.EmbeddedProtocol.SourceSpan)
+  field(:stack_trace, 5, type: :string)
+  field(:formatted, 6, type: :string)
 end
 
 defmodule Sass.EmbeddedProtocol.OutboundMessage.CanonicalizeRequest do
@@ -394,10 +403,10 @@ defmodule Sass.EmbeddedProtocol.OutboundMessage.CanonicalizeRequest do
 
   defstruct [:id, :compilation_id, :importer_id, :url]
 
-  field :id, 1, type: :uint32
-  field :compilation_id, 2, type: :uint32
-  field :importer_id, 3, type: :uint32
-  field :url, 4, type: :string
+  field(:id, 1, type: :uint32)
+  field(:compilation_id, 2, type: :uint32)
+  field(:importer_id, 3, type: :uint32)
+  field(:url, 4, type: :string)
 end
 
 defmodule Sass.EmbeddedProtocol.OutboundMessage.ImportRequest do
@@ -413,10 +422,10 @@ defmodule Sass.EmbeddedProtocol.OutboundMessage.ImportRequest do
 
   defstruct [:id, :compilation_id, :importer_id, :url]
 
-  field :id, 1, type: :uint32
-  field :compilation_id, 2, type: :uint32
-  field :importer_id, 3, type: :uint32
-  field :url, 4, type: :string
+  field(:id, 1, type: :uint32)
+  field(:compilation_id, 2, type: :uint32)
+  field(:importer_id, 3, type: :uint32)
+  field(:url, 4, type: :string)
 end
 
 defmodule Sass.EmbeddedProtocol.OutboundMessage.FileImportRequest do
@@ -432,10 +441,10 @@ defmodule Sass.EmbeddedProtocol.OutboundMessage.FileImportRequest do
 
   defstruct [:id, :compilation_id, :importer_id, :url]
 
-  field :id, 1, type: :uint32
-  field :compilation_id, 2, type: :uint32
-  field :importer_id, 3, type: :uint32
-  field :url, 4, type: :string
+  field(:id, 1, type: :uint32)
+  field(:compilation_id, 2, type: :uint32)
+  field(:importer_id, 3, type: :uint32)
+  field(:url, 4, type: :string)
 end
 
 defmodule Sass.EmbeddedProtocol.OutboundMessage.FunctionCallRequest do
@@ -451,12 +460,12 @@ defmodule Sass.EmbeddedProtocol.OutboundMessage.FunctionCallRequest do
 
   defstruct [:identifier, :id, :compilation_id, :arguments]
 
-  oneof :identifier, 0
-  field :id, 1, type: :uint32
-  field :compilation_id, 2, type: :uint32
-  field :name, 3, type: :string, oneof: 0
-  field :function_id, 4, type: :uint32, oneof: 0
-  field :arguments, 5, repeated: true, type: Sass.EmbeddedProtocol.Value
+  oneof(:identifier, 0)
+  field(:id, 1, type: :uint32)
+  field(:compilation_id, 2, type: :uint32)
+  field(:name, 3, type: :string, oneof: 0)
+  field(:function_id, 4, type: :uint32, oneof: 0)
+  field(:arguments, 5, repeated: true, type: Sass.EmbeddedProtocol.Value)
 end
 
 defmodule Sass.EmbeddedProtocol.OutboundMessage do
@@ -469,26 +478,31 @@ defmodule Sass.EmbeddedProtocol.OutboundMessage do
 
   defstruct [:message]
 
-  oneof :message, 0
-  field :error, 1, type: Sass.EmbeddedProtocol.ProtocolError, oneof: 0
-  field :compileResponse, 2, type: Sass.EmbeddedProtocol.OutboundMessage.CompileResponse, oneof: 0
-  field :logEvent, 3, type: Sass.EmbeddedProtocol.OutboundMessage.LogEvent, oneof: 0
+  oneof(:message, 0)
+  field(:error, 1, type: Sass.EmbeddedProtocol.ProtocolError, oneof: 0)
 
-  field :canonicalizeRequest, 4,
+  field(:compileResponse, 2, type: Sass.EmbeddedProtocol.OutboundMessage.CompileResponse, oneof: 0)
+
+  field(:logEvent, 3, type: Sass.EmbeddedProtocol.OutboundMessage.LogEvent, oneof: 0)
+
+  field(:canonicalizeRequest, 4,
     type: Sass.EmbeddedProtocol.OutboundMessage.CanonicalizeRequest,
     oneof: 0
+  )
 
-  field :importRequest, 5, type: Sass.EmbeddedProtocol.OutboundMessage.ImportRequest, oneof: 0
+  field(:importRequest, 5, type: Sass.EmbeddedProtocol.OutboundMessage.ImportRequest, oneof: 0)
 
-  field :fileImportRequest, 6,
+  field(:fileImportRequest, 6,
     type: Sass.EmbeddedProtocol.OutboundMessage.FileImportRequest,
     oneof: 0
+  )
 
-  field :functionCallRequest, 7,
+  field(:functionCallRequest, 7,
     type: Sass.EmbeddedProtocol.OutboundMessage.FunctionCallRequest,
     oneof: 0
+  )
 
-  field :versionResponse, 8, type: Sass.EmbeddedProtocol.OutboundMessage.VersionResponse, oneof: 0
+  field(:versionResponse, 8, type: Sass.EmbeddedProtocol.OutboundMessage.VersionResponse, oneof: 0)
 end
 
 defmodule Sass.EmbeddedProtocol.ProtocolError do
@@ -503,9 +517,9 @@ defmodule Sass.EmbeddedProtocol.ProtocolError do
 
   defstruct [:type, :id, :message]
 
-  field :type, 1, type: Sass.EmbeddedProtocol.ProtocolError.ErrorType, enum: true
-  field :id, 2, type: :uint32
-  field :message, 3, type: :string
+  field(:type, 1, type: Sass.EmbeddedProtocol.ProtocolError.ErrorType, enum: true)
+  field(:id, 2, type: :uint32)
+  field(:message, 3, type: :string)
 end
 
 defmodule Sass.EmbeddedProtocol.SourceSpan.SourceLocation do
@@ -520,9 +534,9 @@ defmodule Sass.EmbeddedProtocol.SourceSpan.SourceLocation do
 
   defstruct [:offset, :line, :column]
 
-  field :offset, 1, type: :uint32
-  field :line, 2, type: :uint32
-  field :column, 3, type: :uint32
+  field(:offset, 1, type: :uint32)
+  field(:line, 2, type: :uint32)
+  field(:column, 3, type: :uint32)
 end
 
 defmodule Sass.EmbeddedProtocol.SourceSpan do
@@ -539,11 +553,11 @@ defmodule Sass.EmbeddedProtocol.SourceSpan do
 
   defstruct [:text, :start, :end, :url, :context]
 
-  field :text, 1, type: :string
-  field :start, 2, type: Sass.EmbeddedProtocol.SourceSpan.SourceLocation
-  field :end, 3, type: Sass.EmbeddedProtocol.SourceSpan.SourceLocation
-  field :url, 4, type: :string
-  field :context, 5, type: :string
+  field(:text, 1, type: :string)
+  field(:start, 2, type: Sass.EmbeddedProtocol.SourceSpan.SourceLocation)
+  field(:end, 3, type: Sass.EmbeddedProtocol.SourceSpan.SourceLocation)
+  field(:url, 4, type: :string)
+  field(:context, 5, type: :string)
 end
 
 defmodule Sass.EmbeddedProtocol.Value.String do
@@ -557,8 +571,8 @@ defmodule Sass.EmbeddedProtocol.Value.String do
 
   defstruct [:text, :quoted]
 
-  field :text, 1, type: :string
-  field :quoted, 2, type: :bool
+  field(:text, 1, type: :string)
+  field(:quoted, 2, type: :bool)
 end
 
 defmodule Sass.EmbeddedProtocol.Value.Number do
@@ -573,9 +587,9 @@ defmodule Sass.EmbeddedProtocol.Value.Number do
 
   defstruct [:value, :numerators, :denominators]
 
-  field :value, 1, type: :double
-  field :numerators, 2, repeated: true, type: :string
-  field :denominators, 3, repeated: true, type: :string
+  field(:value, 1, type: :double)
+  field(:numerators, 2, repeated: true, type: :string)
+  field(:denominators, 3, repeated: true, type: :string)
 end
 
 defmodule Sass.EmbeddedProtocol.Value.RgbColor do
@@ -591,10 +605,10 @@ defmodule Sass.EmbeddedProtocol.Value.RgbColor do
 
   defstruct [:red, :green, :blue, :alpha]
 
-  field :red, 1, type: :uint32
-  field :green, 2, type: :uint32
-  field :blue, 3, type: :uint32
-  field :alpha, 4, type: :double
+  field(:red, 1, type: :uint32)
+  field(:green, 2, type: :uint32)
+  field(:blue, 3, type: :uint32)
+  field(:alpha, 4, type: :double)
 end
 
 defmodule Sass.EmbeddedProtocol.Value.HslColor do
@@ -610,10 +624,10 @@ defmodule Sass.EmbeddedProtocol.Value.HslColor do
 
   defstruct [:hue, :saturation, :lightness, :alpha]
 
-  field :hue, 1, type: :double
-  field :saturation, 2, type: :double
-  field :lightness, 3, type: :double
-  field :alpha, 4, type: :double
+  field(:hue, 1, type: :double)
+  field(:saturation, 2, type: :double)
+  field(:lightness, 3, type: :double)
+  field(:alpha, 4, type: :double)
 end
 
 defmodule Sass.EmbeddedProtocol.Value.List do
@@ -628,9 +642,9 @@ defmodule Sass.EmbeddedProtocol.Value.List do
 
   defstruct [:separator, :has_brackets, :contents]
 
-  field :separator, 1, type: Sass.EmbeddedProtocol.Value.List.Separator, enum: true
-  field :has_brackets, 2, type: :bool
-  field :contents, 3, repeated: true, type: Sass.EmbeddedProtocol.Value
+  field(:separator, 1, type: Sass.EmbeddedProtocol.Value.List.Separator, enum: true)
+  field(:has_brackets, 2, type: :bool)
+  field(:contents, 3, repeated: true, type: Sass.EmbeddedProtocol.Value)
 end
 
 defmodule Sass.EmbeddedProtocol.Value.Map.Entry do
@@ -644,8 +658,8 @@ defmodule Sass.EmbeddedProtocol.Value.Map.Entry do
 
   defstruct [:key, :value]
 
-  field :key, 1, type: Sass.EmbeddedProtocol.Value
-  field :value, 2, type: Sass.EmbeddedProtocol.Value
+  field(:key, 1, type: Sass.EmbeddedProtocol.Value)
+  field(:value, 2, type: Sass.EmbeddedProtocol.Value)
 end
 
 defmodule Sass.EmbeddedProtocol.Value.Map do
@@ -658,7 +672,7 @@ defmodule Sass.EmbeddedProtocol.Value.Map do
 
   defstruct [:entries]
 
-  field :entries, 1, repeated: true, type: Sass.EmbeddedProtocol.Value.Map.Entry
+  field(:entries, 1, repeated: true, type: Sass.EmbeddedProtocol.Value.Map.Entry)
 end
 
 defmodule Sass.EmbeddedProtocol.Value.CompilerFunction do
@@ -671,7 +685,7 @@ defmodule Sass.EmbeddedProtocol.Value.CompilerFunction do
 
   defstruct [:id]
 
-  field :id, 1, type: :uint32
+  field(:id, 1, type: :uint32)
 end
 
 defmodule Sass.EmbeddedProtocol.Value.HostFunction do
@@ -685,8 +699,8 @@ defmodule Sass.EmbeddedProtocol.Value.HostFunction do
 
   defstruct [:id, :signature]
 
-  field :id, 1, type: :uint32
-  field :signature, 2, type: :string
+  field(:id, 1, type: :uint32)
+  field(:signature, 2, type: :string)
 end
 
 defmodule Sass.EmbeddedProtocol.Value do
@@ -699,14 +713,14 @@ defmodule Sass.EmbeddedProtocol.Value do
 
   defstruct [:value]
 
-  oneof :value, 0
-  field :string, 1, type: Sass.EmbeddedProtocol.Value.String, oneof: 0
-  field :number, 2, type: Sass.EmbeddedProtocol.Value.Number, oneof: 0
-  field :rgb_color, 3, type: Sass.EmbeddedProtocol.Value.RgbColor, oneof: 0
-  field :hsl_color, 4, type: Sass.EmbeddedProtocol.Value.HslColor, oneof: 0
-  field :list, 5, type: Sass.EmbeddedProtocol.Value.List, oneof: 0
-  field :map, 6, type: Sass.EmbeddedProtocol.Value.Map, oneof: 0
-  field :singleton, 7, type: Sass.EmbeddedProtocol.Value.Singleton, enum: true, oneof: 0
-  field :compiler_function, 8, type: Sass.EmbeddedProtocol.Value.CompilerFunction, oneof: 0
-  field :host_function, 9, type: Sass.EmbeddedProtocol.Value.HostFunction, oneof: 0
+  oneof(:value, 0)
+  field(:string, 1, type: Sass.EmbeddedProtocol.Value.String, oneof: 0)
+  field(:number, 2, type: Sass.EmbeddedProtocol.Value.Number, oneof: 0)
+  field(:rgb_color, 3, type: Sass.EmbeddedProtocol.Value.RgbColor, oneof: 0)
+  field(:hsl_color, 4, type: Sass.EmbeddedProtocol.Value.HslColor, oneof: 0)
+  field(:list, 5, type: Sass.EmbeddedProtocol.Value.List, oneof: 0)
+  field(:map, 6, type: Sass.EmbeddedProtocol.Value.Map, oneof: 0)
+  field(:singleton, 7, type: Sass.EmbeddedProtocol.Value.Singleton, enum: true, oneof: 0)
+  field(:compiler_function, 8, type: Sass.EmbeddedProtocol.Value.CompilerFunction, oneof: 0)
+  field(:host_function, 9, type: Sass.EmbeddedProtocol.Value.HostFunction, oneof: 0)
 end

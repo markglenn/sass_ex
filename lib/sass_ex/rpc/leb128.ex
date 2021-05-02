@@ -1,4 +1,4 @@
-defmodule SassEx.Processor.LEB128 do
+defmodule SassEx.RPC.LEB128 do
   @moduledoc """
   LEB128 (Little Endian Base 128) encoder and decoder.
 

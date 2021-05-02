@@ -1,6 +1,11 @@
-defmodule SassEx.SassProcessor do
+defmodule SassEx.Processor do
+  @moduledoc """
+  Sass processor. Manages the communication between the Dart Sass Embedded
+  processor and Elixir.
+  """
+
   use GenServer
-  # require Logger
+  require Logger
 
   @macos_command "./vendor/sass_embedded/macos/dart-sass-embedded"
   @linux64_command "./vendor/sass_embedded/linux64/dart-sass-embedded"
@@ -9,7 +14,7 @@ defmodule SassEx.SassProcessor do
   alias Sass.EmbeddedProtocol.{InboundMessage, OutboundMessage}
   alias Sass.EmbeddedProtocol.InboundMessage.CompileRequest.Importer
 
-  alias SassEx.Processor.{Packet, OpenRequest}
+  alias SassEx.RPC.{Message, OpenRequest}
 
   def child_spec(arg) do
     %{
@@ -50,12 +55,6 @@ defmodule SassEx.SassProcessor do
   def compile(pid, body, importers),
     do: GenServer.call(pid, {:compile, body, importers}, 2000)
 
-  def handle_call(:close, _from, %{port: port} = state) do
-    Port.close(port)
-
-    {:ok, :ok, %{state | port: nil}}
-  end
-
   def handle_call({:compile, body, importers}, from, state) do
     alias InboundMessage.CompileRequest.StringInput
 
@@ -88,18 +87,19 @@ defmodule SassEx.SassProcessor do
 
     send_message(state, :compileRequest, message)
 
+    # This is an asynchronouse call, so don't yet reply to the caller
     {:noreply, %{state | requests: Map.put(state.requests, request.id, request)}}
   end
 
   # This callback handles data incoming from the command's STDOUT
   def handle_info({_port, {:data, data}}, state) do
     %{state | buffer: state.buffer <> data}
-    |> parse_packet()
+    |> decode_message()
   end
 
   # This callback tells us when the process exits
   def handle_info({_port, {:exit_status, status}}, state) do
-    IO.inspect("External exit: :exit_status: #{status}")
+    Logger.info("External exit: :exit_status: #{status}")
 
     # Our process is stopped, so we should kill this GenServer
     {:stop, :normal, state}
@@ -107,13 +107,13 @@ defmodule SassEx.SassProcessor do
 
   # no-op catch-all callback for unhandled messages
   def handle_info(msg, state) do
-    IO.inspect("Invalid message received: #{inspect(msg)}")
+    Logger.warn(fn -> "Invalid message received: #{inspect(msg)}" end)
     {:noreply, state}
   end
 
-  @spec parse_packet(state_t) :: {:noreply, state_t}
-  defp parse_packet(state) do
-    case Packet.parse(state.buffer) do
+  @spec decode_message(state_t) :: {:noreply, state_t}
+  defp decode_message(state) do
+    case Message.decode(state.buffer) do
       :incomplete ->
         {:noreply, state}
 
@@ -121,9 +121,9 @@ defmodule SassEx.SassProcessor do
         %{message: {_, message}} = OutboundMessage.decode(body)
 
         state
-        |> handle_packet(message)
+        |> handle_message(message)
         |> Map.put(:buffer, rest)
-        |> parse_packet()
+        |> decode_message()
     end
   end
 
@@ -134,9 +134,9 @@ defmodule SassEx.SassProcessor do
   end
 
   defp send_message(%{port: port}, type, message),
-    do: Port.command(port, Packet.encode(type, message))
+    do: Port.command(port, Message.encode(type, message))
 
-  defp handle_packet(
+  defp handle_message(
          state,
          %OutboundMessage.CompileResponse{id: id, result: {_, packet}}
        ) do
@@ -151,7 +151,7 @@ defmodule SassEx.SassProcessor do
     end
   end
 
-  defp handle_packet(state, %OutboundMessage.CanonicalizeRequest{
+  defp handle_message(state, %OutboundMessage.CanonicalizeRequest{
          id: id,
          importer_id: importer_id,
          compilation_id: compilation_id,
@@ -173,7 +173,7 @@ defmodule SassEx.SassProcessor do
     state
   end
 
-  defp handle_packet(state, %OutboundMessage.ImportRequest{} = request) do
+  defp handle_message(state, %OutboundMessage.ImportRequest{} = request) do
     alias Sass.EmbeddedProtocol.InboundMessage.ImportResponse
     alias Sass.EmbeddedProtocol.InboundMessage.ImportResponse.ImportSuccess
 
@@ -194,8 +194,8 @@ defmodule SassEx.SassProcessor do
     state
   end
 
-  defp handle_packet(state, response) do
-    IO.inspect("Unknown message received from SASS compiler: #{inspect(response)}")
+  defp handle_message(state, response) do
+    Logger.warn(fn -> "Unknown message received from SASS compiler: #{inspect(response)}" end)
 
     state
   end
