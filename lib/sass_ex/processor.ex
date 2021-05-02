@@ -14,8 +14,10 @@ defmodule SassEx.Processor do
   alias Sass.EmbeddedProtocol.{InboundMessage, OutboundMessage}
   alias Sass.EmbeddedProtocol.InboundMessage.CompileRequest.Importer
 
-  alias SassEx.RPC.{Message, OpenRequest}
+  alias SassEx.Request
+  alias SassEx.RPC.Message
 
+  @doc false
   def child_spec(arg) do
     %{
       id: __MODULE__,
@@ -23,21 +25,31 @@ defmodule SassEx.Processor do
     }
   end
 
+  @type importer_t :: Module | Struct
   @type state_t :: %{
           port: port | nil,
           buffer: binary,
-          requests: %{optional(pos_integer) => OpenRequest.t()},
+          requests: %{optional(pos_integer) => Request.t()},
           last_request_id: non_neg_integer()
         }
 
+  @type compile_opts :: [
+          importers: [importer_t()] | [] | nil,
+          style: :expanded | :compressed,
+          source_map: boolean,
+          syntax: :css | :sass | :scss
+        ]
+
   # GenServer API
   @spec start_link(any, GenServer.options()) :: GenServer.on_start()
+  @doc false
   def start_link(args \\ [], opts \\ []) do
     opts = Keyword.put_new(opts, :name, __MODULE__)
     GenServer.start_link(__MODULE__, args, opts)
   end
 
   @spec init(any) :: {:ok, state_t}
+  @doc false
   def init(_opts) do
     command =
       case :os.type() do
@@ -51,12 +63,30 @@ defmodule SassEx.Processor do
     {:ok, %{port: port, buffer: <<>>, requests: %{}, last_request_id: 0}}
   end
 
-  @spec compile(GenServer.server(), String.t(), [OpenRequest.importer_t()] | nil) :: term
-  def compile(pid, body, importers),
-    do: GenServer.call(pid, {:compile, body, importers}, 2000)
+  @spec compile(GenServer.server(), String.t(), compile_opts) :: term
+  @doc false
+  def compile(pid, body, opts),
+    do: GenServer.call(pid, {:compile, body, opts}, 2000)
 
-  def handle_call({:compile, body, importers}, from, state) do
+  def handle_call({:compile, body, opts}, from, state) do
     alias InboundMessage.CompileRequest.StringInput
+
+    style =
+      case Keyword.get(opts, :style, :expanded) do
+        :expanded -> :EXPANDED
+        :compressed -> :COMPRESSED
+      end
+
+    importers = Keyword.get(opts, :importers)
+    source_map = Keyword.get(opts, :source_map, false)
+
+    syntax =
+      case Keyword.get(opts, :syntax) do
+        :css -> :CSS
+        :sass -> :INDENTED
+        :scss -> :SCSS
+        _ -> nil
+      end
 
     # Use the default importer or the first given
     relative_importer =
@@ -66,11 +96,11 @@ defmodule SassEx.Processor do
         _ -> Importer.new(%{importer: {:importer_id, 0}})
       end
 
-    input = StringInput.new(%{source: body, importer: relative_importer})
+    input = StringInput.new(%{source: body, importer: relative_importer, syntax: syntax})
 
-    state = %{state | last_request_id: state.last_request_id + 1}
+    state = Map.put(state, :last_request_id, state.last_request_id + 1)
 
-    request = %OpenRequest{
+    request = %Request{
       id: state.last_request_id,
       pid: from,
       importers: importers
@@ -80,8 +110,8 @@ defmodule SassEx.Processor do
       InboundMessage.CompileRequest.new(%{
         input: {:string, input},
         id: request.id,
-        source_map: true,
-        style: :EXPANDED,
+        source_map: source_map,
+        style: style,
         importers: importers(importers)
       })
 
@@ -117,9 +147,7 @@ defmodule SassEx.Processor do
       :incomplete ->
         {:noreply, state}
 
-      {:ok, body, rest} ->
-        %{message: {_, message}} = OutboundMessage.decode(body)
-
+      {:ok, %{message: {_, message}}, rest} ->
         state
         |> handle_message(message)
         |> Map.put(:buffer, rest)
@@ -138,11 +166,11 @@ defmodule SassEx.Processor do
 
   defp handle_message(
          state,
-         %OutboundMessage.CompileResponse{id: id, result: {_, packet}}
+         %OutboundMessage.CompileResponse{id: id, result: {_, message}}
        ) do
     case Map.get(state.requests, id) do
-      %OpenRequest{pid: pid} ->
-        GenServer.reply(pid, packet)
+      %Request{pid: pid} ->
+        GenServer.reply(pid, message)
 
         %{state | requests: Map.delete(state.requests, id)}
 
@@ -208,7 +236,7 @@ defmodule SassEx.Processor do
   defp load_contents(%module{} = importer, url), do: module.load(importer, url)
   defp load_contents(module, url), do: module.load(nil, url)
 
-  @spec importers([OpenRequest.importer_t()] | nil) :: [
+  @spec importers([importer_t()] | nil) :: [
           InboundMessage.CompileRequest.Importer.t()
         ]
   defp importers(nil), do: []

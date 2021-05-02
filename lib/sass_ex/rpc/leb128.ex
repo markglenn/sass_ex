@@ -1,9 +1,8 @@
 defmodule SassEx.RPC.LEB128 do
-  @moduledoc """
-  LEB128 (Little Endian Base 128) encoder and decoder.
+  @moduledoc false
 
-  https://en.wikipedia.org/wiki/LEB128
-  """
+  # LEB128 (Little Endian Base 128) encoder and decoder.
+  # https://en.wikipedia.org/wiki/LEB128
 
   @type result_t :: {:ok, non_neg_integer(), binary} | :error
 

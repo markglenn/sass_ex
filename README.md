@@ -1,3 +1,3 @@
 # SassEx
 
-Sass compiler for Elixir that uses the new [Dart Sass](https://sass-lang.com/dart-sass).
+Sass compiler for Elixir that uses the newer [Dart Sass](https://sass-lang.com/dart-sass).

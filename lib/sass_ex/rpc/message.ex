@@ -1,15 +1,12 @@
 defmodule SassEx.RPC.Message do
-  @moduledoc """
-  Sass "messages" are sent and received via :stdio.  They are LEB128 prepended
-  to give a known message length.
-  """
+  @moduledoc false
 
-  alias Sass.EmbeddedProtocol.InboundMessage
+  alias Sass.EmbeddedProtocol.{InboundMessage, OutboundMessage}
   alias SassEx.RPC.LEB128
 
   @spec encode(atom, any) :: binary
   @doc """
-  Encode a message into a LEB128 prefixed binary message
+  Encode an inbound message into a LEB128 prefixed binary message
   """
   def encode(type, message) do
     msg =
@@ -25,13 +22,20 @@ defmodule SassEx.RPC.Message do
     <<len::binary, msg::binary>>
   end
 
-  @spec decode(binary) :: :incomplete | {:ok, binary, binary}
-  def decode(raw), do: do_decode(LEB128.decode(raw))
+  @spec decode(binary) :: :incomplete | {:ok, OutboundMessage.t(), binary}
+  @doc """
+  Decode a LEB128 prefixed message into an `OutboundMessage`
+  """
+  def decode(raw) when is_binary(raw) do
+    raw
+    |> LEB128.decode()
+    |> do_decode()
+  end
 
   defp do_decode({:ok, size, raw_packet}) when byte_size(raw_packet) >= size do
     <<body::binary-size(size), rest::binary>> = raw_packet
 
-    {:ok, body, rest}
+    {:ok, OutboundMessage.decode(body), rest}
   end
 
   defp do_decode(_), do: :incomplete

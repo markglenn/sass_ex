@@ -4,12 +4,21 @@ defmodule SassEx.MixProject do
   def project do
     [
       app: :sass_ex,
+      description: description(),
+      name: "sass_ex",
+      source_url: "https://github.com/markglenn/sass_ex",
+      homepage_url: "https://github.com/markglenn/sass_ex",
       version: "0.1.0",
       elixir: "~> 1.11",
-      # Mix.env() == :prod,
-      start_permanent: true,
+      start_permanent: Mix.env() == :prod,
       deps: deps(),
-      aliases: aliases()
+      aliases: aliases(),
+      docs: [main: "SassEx", extras: ["README.md"]],
+      package: [
+        maintainers: ["markglenn@gmail.com"],
+        license: ["MIT"],
+        links: %{"GitHub" => "https://github.com/markglenn/sass_ex"}
+      ]
     ]
   end
 
@@ -27,7 +36,8 @@ defmodule SassEx.MixProject do
       {:protobuf, "~> 0.7.1"},
       {:google_protos, "~> 0.1"},
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.1", only: [:dev], runtime: false}
+      {:dialyxir, "~> 1.1", only: [:dev], runtime: false},
+      {:ex_doc, "~> 0.24", only: [:dev, :test], runtime: false}
     ]
   end
 
@@ -36,6 +46,12 @@ defmodule SassEx.MixProject do
       lint: ["format --check-formatted", "credo --strict", "dialyzer"],
       proto_update: &generate/1
     ]
+  end
+
+  defp description do
+    """
+    SCSS/Sass compiler for Elixir that uses Dart Sass.
+    """
   end
 
   defp generate(_) do
