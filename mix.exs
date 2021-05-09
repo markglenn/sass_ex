@@ -16,7 +16,7 @@ defmodule SassEx.MixProject do
       docs: [main: "SassEx", extras: ["README.md"]],
       package: [
         maintainers: ["markglenn@gmail.com"],
-        license: ["MIT"],
+        licenses: ["MIT"],
         links: %{"GitHub" => "https://github.com/markglenn/sass_ex"}
       ]
     ]
