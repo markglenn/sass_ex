@@ -55,9 +55,11 @@ defmodule SassEx.MixProject do
   end
 
   defp generate(_) do
+    repo = "sass/embedded-protocol"
+    tag = "HEAD"
     # Download the latest proto file
     Mix.shell().cmd(
-      "curl https://raw.githubusercontent.com/sass/embedded-protocol/master/embedded_sass.proto --output embedded_sass.proto"
+      "curl https://raw.githubusercontent.com/#{repo}/#{tag}/embedded_sass.proto --output embedded_sass.proto"
     )
 
     # Generate the elixir code

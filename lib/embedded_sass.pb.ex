@@ -1,4 +1,14 @@
-defmodule Sass.EmbeddedProtocol.InboundMessage.Syntax do
+defmodule Sass.EmbeddedProtocol.OutputStyle do
+  @moduledoc false
+  use Protobuf, enum: true, syntax: :proto3
+  @type t :: integer | :EXPANDED | :COMPRESSED
+
+  field(:EXPANDED, 0)
+
+  field(:COMPRESSED, 1)
+end
+
+defmodule Sass.EmbeddedProtocol.Syntax do
   @moduledoc false
   use Protobuf, enum: true, syntax: :proto3
   @type t :: integer | :SCSS | :INDENTED | :CSS
@@ -10,17 +20,7 @@ defmodule Sass.EmbeddedProtocol.InboundMessage.Syntax do
   field(:CSS, 2)
 end
 
-defmodule Sass.EmbeddedProtocol.InboundMessage.CompileRequest.OutputStyle do
-  @moduledoc false
-  use Protobuf, enum: true, syntax: :proto3
-  @type t :: integer | :EXPANDED | :COMPRESSED
-
-  field(:EXPANDED, 0)
-
-  field(:COMPRESSED, 1)
-end
-
-defmodule Sass.EmbeddedProtocol.OutboundMessage.LogEvent.Type do
+defmodule Sass.EmbeddedProtocol.LogEventType do
   @moduledoc false
   use Protobuf, enum: true, syntax: :proto3
   @type t :: integer | :WARNING | :DEPRECATION_WARNING | :DEBUG
@@ -32,7 +32,7 @@ defmodule Sass.EmbeddedProtocol.OutboundMessage.LogEvent.Type do
   field(:DEBUG, 2)
 end
 
-defmodule Sass.EmbeddedProtocol.ProtocolError.ErrorType do
+defmodule Sass.EmbeddedProtocol.ProtocolErrorType do
   @moduledoc false
   use Protobuf, enum: true, syntax: :proto3
   @type t :: integer | :PARSE | :PARAMS | :INTERNAL
@@ -44,19 +44,7 @@ defmodule Sass.EmbeddedProtocol.ProtocolError.ErrorType do
   field(:INTERNAL, 2)
 end
 
-defmodule Sass.EmbeddedProtocol.Value.Singleton do
-  @moduledoc false
-  use Protobuf, enum: true, syntax: :proto3
-  @type t :: integer | :TRUE | :FALSE | :NULL
-
-  field(:TRUE, 0)
-
-  field(:FALSE, 1)
-
-  field(:NULL, 2)
-end
-
-defmodule Sass.EmbeddedProtocol.Value.List.Separator do
+defmodule Sass.EmbeddedProtocol.ListSeparator do
   @moduledoc false
   use Protobuf, enum: true, syntax: :proto3
   @type t :: integer | :COMMA | :SPACE | :SLASH | :UNDECIDED
@@ -70,12 +58,29 @@ defmodule Sass.EmbeddedProtocol.Value.List.Separator do
   field(:UNDECIDED, 3)
 end
 
+defmodule Sass.EmbeddedProtocol.SingletonValue do
+  @moduledoc false
+  use Protobuf, enum: true, syntax: :proto3
+  @type t :: integer | :TRUE | :FALSE | :NULL
+
+  field(:TRUE, 0)
+
+  field(:FALSE, 1)
+
+  field(:NULL, 2)
+end
+
 defmodule Sass.EmbeddedProtocol.InboundMessage.VersionRequest do
   @moduledoc false
   use Protobuf, syntax: :proto3
-  @type t :: %__MODULE__{}
 
-  defstruct []
+  @type t :: %__MODULE__{
+          id: non_neg_integer
+        }
+
+  defstruct [:id]
+
+  field(:id, 1, type: :uint32)
 end
 
 defmodule Sass.EmbeddedProtocol.InboundMessage.CompileRequest.StringInput do
@@ -85,7 +90,7 @@ defmodule Sass.EmbeddedProtocol.InboundMessage.CompileRequest.StringInput do
   @type t :: %__MODULE__{
           source: String.t(),
           url: String.t(),
-          syntax: Sass.EmbeddedProtocol.InboundMessage.Syntax.t(),
+          syntax: Sass.EmbeddedProtocol.Syntax.t(),
           importer: Sass.EmbeddedProtocol.InboundMessage.CompileRequest.Importer.t() | nil
         }
 
@@ -93,7 +98,7 @@ defmodule Sass.EmbeddedProtocol.InboundMessage.CompileRequest.StringInput do
 
   field(:source, 1, type: :string)
   field(:url, 2, type: :string)
-  field(:syntax, 3, type: Sass.EmbeddedProtocol.InboundMessage.Syntax, enum: true)
+  field(:syntax, 3, type: Sass.EmbeddedProtocol.Syntax, enum: true)
   field(:importer, 4, type: Sass.EmbeddedProtocol.InboundMessage.CompileRequest.Importer)
 end
 
@@ -120,12 +125,14 @@ defmodule Sass.EmbeddedProtocol.InboundMessage.CompileRequest do
   @type t :: %__MODULE__{
           input: {atom, any},
           id: non_neg_integer,
-          style: Sass.EmbeddedProtocol.InboundMessage.CompileRequest.OutputStyle.t(),
+          style: Sass.EmbeddedProtocol.OutputStyle.t(),
           source_map: boolean,
           importers: [Sass.EmbeddedProtocol.InboundMessage.CompileRequest.Importer.t()],
           global_functions: [String.t()],
           alert_color: boolean,
-          alert_ascii: boolean
+          alert_ascii: boolean,
+          verbose: boolean,
+          quiet_deps: boolean
         }
 
   defstruct [
@@ -136,7 +143,9 @@ defmodule Sass.EmbeddedProtocol.InboundMessage.CompileRequest do
     :importers,
     :global_functions,
     :alert_color,
-    :alert_ascii
+    :alert_ascii,
+    :verbose,
+    :quiet_deps
   ]
 
   oneof(:input, 0)
@@ -148,12 +157,7 @@ defmodule Sass.EmbeddedProtocol.InboundMessage.CompileRequest do
   )
 
   field(:path, 3, type: :string, oneof: 0)
-
-  field(:style, 4,
-    type: Sass.EmbeddedProtocol.InboundMessage.CompileRequest.OutputStyle,
-    enum: true
-  )
-
+  field(:style, 4, type: Sass.EmbeddedProtocol.OutputStyle, enum: true)
   field(:source_map, 5, type: :bool)
 
   field(:importers, 6,
@@ -164,6 +168,8 @@ defmodule Sass.EmbeddedProtocol.InboundMessage.CompileRequest do
   field(:global_functions, 7, repeated: true, type: :string)
   field(:alert_color, 8, type: :bool)
   field(:alert_ascii, 9, type: :bool)
+  field(:verbose, 10, type: :bool)
+  field(:quiet_deps, 11, type: :bool)
 end
 
 defmodule Sass.EmbeddedProtocol.InboundMessage.CanonicalizeResponse do
@@ -189,15 +195,15 @@ defmodule Sass.EmbeddedProtocol.InboundMessage.ImportResponse.ImportSuccess do
 
   @type t :: %__MODULE__{
           contents: String.t(),
-          syntax: Sass.EmbeddedProtocol.InboundMessage.Syntax.t(),
-          sourceMapUrl: String.t()
+          syntax: Sass.EmbeddedProtocol.Syntax.t(),
+          source_map_url: String.t()
         }
 
-  defstruct [:contents, :syntax, :sourceMapUrl]
+  defstruct [:contents, :syntax, :source_map_url]
 
   field(:contents, 1, type: :string)
-  field(:syntax, 2, type: Sass.EmbeddedProtocol.InboundMessage.Syntax, enum: true)
-  field(:sourceMapUrl, 3, type: :string)
+  field(:syntax, 2, type: Sass.EmbeddedProtocol.Syntax, enum: true)
+  field(:source_map_url, 3, type: :string)
 end
 
 defmodule Sass.EmbeddedProtocol.InboundMessage.ImportResponse do
@@ -267,26 +273,26 @@ defmodule Sass.EmbeddedProtocol.InboundMessage do
   defstruct [:message]
 
   oneof(:message, 0)
-  field(:compileRequest, 2, type: Sass.EmbeddedProtocol.InboundMessage.CompileRequest, oneof: 0)
+  field(:compile_request, 2, type: Sass.EmbeddedProtocol.InboundMessage.CompileRequest, oneof: 0)
 
-  field(:canonicalizeResponse, 3,
+  field(:canonicalize_response, 3,
     type: Sass.EmbeddedProtocol.InboundMessage.CanonicalizeResponse,
     oneof: 0
   )
 
-  field(:importResponse, 4, type: Sass.EmbeddedProtocol.InboundMessage.ImportResponse, oneof: 0)
+  field(:import_response, 4, type: Sass.EmbeddedProtocol.InboundMessage.ImportResponse, oneof: 0)
 
-  field(:fileImportResponse, 5,
+  field(:file_import_response, 5,
     type: Sass.EmbeddedProtocol.InboundMessage.FileImportResponse,
     oneof: 0
   )
 
-  field(:functionCallResponse, 6,
+  field(:function_call_response, 6,
     type: Sass.EmbeddedProtocol.InboundMessage.FunctionCallResponse,
     oneof: 0
   )
 
-  field(:versionRequest, 7, type: Sass.EmbeddedProtocol.InboundMessage.VersionRequest, oneof: 0)
+  field(:version_request, 7, type: Sass.EmbeddedProtocol.InboundMessage.VersionRequest, oneof: 0)
 end
 
 defmodule Sass.EmbeddedProtocol.OutboundMessage.VersionResponse do
@@ -294,14 +300,22 @@ defmodule Sass.EmbeddedProtocol.OutboundMessage.VersionResponse do
   use Protobuf, syntax: :proto3
 
   @type t :: %__MODULE__{
+          id: non_neg_integer,
           protocol_version: String.t(),
           compiler_version: String.t(),
           implementation_version: String.t(),
           implementation_name: String.t()
         }
 
-  defstruct [:protocol_version, :compiler_version, :implementation_version, :implementation_name]
+  defstruct [
+    :id,
+    :protocol_version,
+    :compiler_version,
+    :implementation_version,
+    :implementation_name
+  ]
 
+  field(:id, 5, type: :uint32)
   field(:protocol_version, 1, type: :string)
   field(:compiler_version, 2, type: :string)
   field(:implementation_version, 3, type: :string)
@@ -373,7 +387,7 @@ defmodule Sass.EmbeddedProtocol.OutboundMessage.LogEvent do
 
   @type t :: %__MODULE__{
           compilation_id: non_neg_integer,
-          type: Sass.EmbeddedProtocol.OutboundMessage.LogEvent.Type.t(),
+          type: Sass.EmbeddedProtocol.LogEventType.t(),
           message: String.t(),
           span: Sass.EmbeddedProtocol.SourceSpan.t() | nil,
           stack_trace: String.t(),
@@ -383,7 +397,7 @@ defmodule Sass.EmbeddedProtocol.OutboundMessage.LogEvent do
   defstruct [:compilation_id, :type, :message, :span, :stack_trace, :formatted]
 
   field(:compilation_id, 1, type: :uint32)
-  field(:type, 2, type: Sass.EmbeddedProtocol.OutboundMessage.LogEvent.Type, enum: true)
+  field(:type, 2, type: Sass.EmbeddedProtocol.LogEventType, enum: true)
   field(:message, 3, type: :string)
   field(:span, 4, type: Sass.EmbeddedProtocol.SourceSpan)
   field(:stack_trace, 5, type: :string)
@@ -398,15 +412,17 @@ defmodule Sass.EmbeddedProtocol.OutboundMessage.CanonicalizeRequest do
           id: non_neg_integer,
           compilation_id: non_neg_integer,
           importer_id: non_neg_integer,
-          url: String.t()
+          url: String.t(),
+          from_import: boolean
         }
 
-  defstruct [:id, :compilation_id, :importer_id, :url]
+  defstruct [:id, :compilation_id, :importer_id, :url, :from_import]
 
   field(:id, 1, type: :uint32)
   field(:compilation_id, 2, type: :uint32)
   field(:importer_id, 3, type: :uint32)
   field(:url, 4, type: :string)
+  field(:from_import, 5, type: :bool)
 end
 
 defmodule Sass.EmbeddedProtocol.OutboundMessage.ImportRequest do
@@ -436,15 +452,17 @@ defmodule Sass.EmbeddedProtocol.OutboundMessage.FileImportRequest do
           id: non_neg_integer,
           compilation_id: non_neg_integer,
           importer_id: non_neg_integer,
-          url: String.t()
+          url: String.t(),
+          from_import: boolean
         }
 
-  defstruct [:id, :compilation_id, :importer_id, :url]
+  defstruct [:id, :compilation_id, :importer_id, :url, :from_import]
 
   field(:id, 1, type: :uint32)
   field(:compilation_id, 2, type: :uint32)
   field(:importer_id, 3, type: :uint32)
   field(:url, 4, type: :string)
+  field(:from_import, 5, type: :bool)
 end
 
 defmodule Sass.EmbeddedProtocol.OutboundMessage.FunctionCallRequest do
@@ -481,28 +499,34 @@ defmodule Sass.EmbeddedProtocol.OutboundMessage do
   oneof(:message, 0)
   field(:error, 1, type: Sass.EmbeddedProtocol.ProtocolError, oneof: 0)
 
-  field(:compileResponse, 2, type: Sass.EmbeddedProtocol.OutboundMessage.CompileResponse, oneof: 0)
+  field(:compile_response, 2,
+    type: Sass.EmbeddedProtocol.OutboundMessage.CompileResponse,
+    oneof: 0
+  )
 
-  field(:logEvent, 3, type: Sass.EmbeddedProtocol.OutboundMessage.LogEvent, oneof: 0)
+  field(:log_event, 3, type: Sass.EmbeddedProtocol.OutboundMessage.LogEvent, oneof: 0)
 
-  field(:canonicalizeRequest, 4,
+  field(:canonicalize_request, 4,
     type: Sass.EmbeddedProtocol.OutboundMessage.CanonicalizeRequest,
     oneof: 0
   )
 
-  field(:importRequest, 5, type: Sass.EmbeddedProtocol.OutboundMessage.ImportRequest, oneof: 0)
+  field(:import_request, 5, type: Sass.EmbeddedProtocol.OutboundMessage.ImportRequest, oneof: 0)
 
-  field(:fileImportRequest, 6,
+  field(:file_import_request, 6,
     type: Sass.EmbeddedProtocol.OutboundMessage.FileImportRequest,
     oneof: 0
   )
 
-  field(:functionCallRequest, 7,
+  field(:function_call_request, 7,
     type: Sass.EmbeddedProtocol.OutboundMessage.FunctionCallRequest,
     oneof: 0
   )
 
-  field(:versionResponse, 8, type: Sass.EmbeddedProtocol.OutboundMessage.VersionResponse, oneof: 0)
+  field(:version_response, 8,
+    type: Sass.EmbeddedProtocol.OutboundMessage.VersionResponse,
+    oneof: 0
+  )
 end
 
 defmodule Sass.EmbeddedProtocol.ProtocolError do
@@ -510,14 +534,14 @@ defmodule Sass.EmbeddedProtocol.ProtocolError do
   use Protobuf, syntax: :proto3
 
   @type t :: %__MODULE__{
-          type: Sass.EmbeddedProtocol.ProtocolError.ErrorType.t(),
+          type: Sass.EmbeddedProtocol.ProtocolErrorType.t(),
           id: non_neg_integer,
           message: String.t()
         }
 
   defstruct [:type, :id, :message]
 
-  field(:type, 1, type: Sass.EmbeddedProtocol.ProtocolError.ErrorType, enum: true)
+  field(:type, 1, type: Sass.EmbeddedProtocol.ProtocolErrorType, enum: true)
   field(:id, 2, type: :uint32)
   field(:message, 3, type: :string)
 end
@@ -635,14 +659,14 @@ defmodule Sass.EmbeddedProtocol.Value.List do
   use Protobuf, syntax: :proto3
 
   @type t :: %__MODULE__{
-          separator: Sass.EmbeddedProtocol.Value.List.Separator.t(),
+          separator: Sass.EmbeddedProtocol.ListSeparator.t(),
           has_brackets: boolean,
           contents: [Sass.EmbeddedProtocol.Value.t()]
         }
 
   defstruct [:separator, :has_brackets, :contents]
 
-  field(:separator, 1, type: Sass.EmbeddedProtocol.Value.List.Separator, enum: true)
+  field(:separator, 1, type: Sass.EmbeddedProtocol.ListSeparator, enum: true)
   field(:has_brackets, 2, type: :bool)
   field(:contents, 3, repeated: true, type: Sass.EmbeddedProtocol.Value)
 end
@@ -720,7 +744,7 @@ defmodule Sass.EmbeddedProtocol.Value do
   field(:hsl_color, 4, type: Sass.EmbeddedProtocol.Value.HslColor, oneof: 0)
   field(:list, 5, type: Sass.EmbeddedProtocol.Value.List, oneof: 0)
   field(:map, 6, type: Sass.EmbeddedProtocol.Value.Map, oneof: 0)
-  field(:singleton, 7, type: Sass.EmbeddedProtocol.Value.Singleton, enum: true, oneof: 0)
+  field(:singleton, 7, type: Sass.EmbeddedProtocol.SingletonValue, enum: true, oneof: 0)
   field(:compiler_function, 8, type: Sass.EmbeddedProtocol.Value.CompilerFunction, oneof: 0)
   field(:host_function, 9, type: Sass.EmbeddedProtocol.Value.HostFunction, oneof: 0)
 end

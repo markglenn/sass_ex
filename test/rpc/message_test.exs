@@ -9,7 +9,7 @@ defmodule SassEx.RPC.MessageTest do
 
     test "encode a simple message" do
       request = InboundMessage.CompileRequest.new(%{})
-      message = Message.encode(:compileRequest, request)
+      message = Message.encode(:compile_request, request)
 
       assert message == <<2, 18, 0>>
       assert LEB128.decode(message) == {:ok, 2, <<18, 0>>}
@@ -22,7 +22,7 @@ defmodule SassEx.RPC.MessageTest do
     test "decodes a simple message" do
       assert {:ok,
               %OutboundMessage{
-                message: {:compileResponse, %OutboundMessage.CompileResponse{id: 0, result: nil}}
+                message: {:compile_response, %OutboundMessage.CompileResponse{id: 0, result: nil}}
               }, ""} == Message.decode(<<2, 18, 0>>)
     end
   end

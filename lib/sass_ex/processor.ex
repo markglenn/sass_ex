@@ -115,7 +115,7 @@ defmodule SassEx.Processor do
         importers: importers(importers)
       })
 
-    send_message(state, :compileRequest, message)
+    send_message(state, :compile_request, message)
 
     # This is an asynchronouse call, so don't yet reply to the caller
     {:noreply, %{state | requests: Map.put(state.requests, request.id, request)}}
@@ -196,7 +196,7 @@ defmodule SassEx.Processor do
 
     message = InboundMessage.CanonicalizeResponse.new(%{id: id, result: result})
 
-    send_message(state, :canonicalizeResponse, message)
+    send_message(state, :canonicalize_response, message)
 
     state
   end
@@ -218,7 +218,7 @@ defmodule SassEx.Processor do
       end
 
     message = ImportResponse.new(%{result: result, id: request.id})
-    send_message(state, :importResponse, message)
+    send_message(state, :import_response, message)
     state
   end
 
