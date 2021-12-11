@@ -58,7 +58,11 @@ defmodule SassEx.Processor do
         {:win32, _} -> @win64_command
       end
 
-    port = Port.open({:spawn_executable, command}, [:binary, :exit_status])
+    port =
+      Port.open(
+        {:spawn_executable, Path.expand(Path.dirname(__ENV__.file) <> "/../." <> command)},
+        [:binary, :exit_status]
+      )
 
     {:ok, %{port: port, buffer: <<>>, requests: %{}, last_request_id: 0}}
   end
