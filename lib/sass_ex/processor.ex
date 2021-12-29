@@ -63,7 +63,6 @@ defmodule SassEx.Processor do
       |> Path.dirname()
       |> Path.join(relative_command)
       |> Path.expand()
-      |> IO.inspect()
 
     port = Port.open({:spawn_executable, command}, [:binary, :exit_status])
 
