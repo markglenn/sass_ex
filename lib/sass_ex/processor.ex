@@ -7,9 +7,9 @@ defmodule SassEx.Processor do
   use GenServer
   require Logger
 
-  @macos_command "./vendor/sass_embedded/macos/dart-sass-embedded"
-  @linux64_command "./vendor/sass_embedded/linux64/dart-sass-embedded"
-  @win64_command "./vendor/sass_embedded/win64/dart-sass-embedded.bat"
+  @macos_command "../../vendor/sass_embedded/macos/dart-sass-embedded"
+  @linux64_command "../../vendor/sass_embedded/linux64/dart-sass-embedded"
+  @win64_command "../../vendor/sass_embedded/win64/dart-sass-embedded.bat"
 
   alias Sass.EmbeddedProtocol.{InboundMessage, OutboundMessage}
   alias Sass.EmbeddedProtocol.InboundMessage.CompileRequest.Importer
@@ -51,12 +51,19 @@ defmodule SassEx.Processor do
   @spec init(any) :: {:ok, state_t}
   @doc false
   def init(_opts) do
-    command =
+    relative_command =
       case :os.type() do
         {:unix, :darwin} -> @macos_command
         {:unix, _} -> @linux64_command
         {:win32, _} -> @win64_command
       end
+
+    command =
+      __ENV__.file
+      |> Path.dirname()
+      |> Path.join(relative_command)
+      |> Path.expand()
+      |> IO.inspect()
 
     port = Port.open({:spawn_executable, command}, [:binary, :exit_status])
 
