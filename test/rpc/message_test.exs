@@ -8,11 +8,11 @@ defmodule SassEx.RPC.MessageTest do
     alias Sass.EmbeddedProtocol.InboundMessage
 
     test "encode a simple message" do
-      request = InboundMessage.CompileRequest.new(%{})
-      message = Message.encode(:compile_request, request)
+      request = %InboundMessage.CompileRequest{}
+      message = Message.encode(:compile_request, request, 1)
 
-      assert message == <<2, 18, 0>>
-      assert LEB128.decode(message) == {:ok, 2, <<18, 0>>}
+      assert message == <<3, 1, 18, 0>>
+      assert LEB128.decode(message) == {:ok, 3, <<1, 18, 0>>}
     end
   end
 
@@ -20,10 +20,14 @@ defmodule SassEx.RPC.MessageTest do
     alias Sass.EmbeddedProtocol.OutboundMessage
 
     test "decodes a simple message" do
-      assert {:ok,
+      assert {:ok, 1,
               %OutboundMessage{
-                message: {:compile_response, %OutboundMessage.CompileResponse{id: 0, result: nil}}
-              }, ""} == Message.decode(<<2, 18, 0>>)
+                message:
+                  {:compile_response,
+                   %OutboundMessage.CompileResponse{
+                     result: {:success, %OutboundMessage.CompileResponse.CompileSuccess{}}
+                   }}
+              }, ""} == Message.decode(<<5, 1, 18, 2, 18, 0>>)
     end
   end
 end
