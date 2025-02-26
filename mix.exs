@@ -33,11 +33,11 @@ defmodule SassEx.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:protobuf, "~> 0.7.1"},
-      {:google_protos, "~> 0.1"},
-      {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.1", only: [:dev], runtime: false},
-      {:ex_doc, "~> 0.24", only: [:dev, :test], runtime: false}
+      {:protobuf, "~> 0.14.1"},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
+      {:ex_doc, "~> 0.34", only: [:dev, :test], runtime: false},
+      {:dart_sass, "~> 0.7", runtime: Mix.env() == :dev}
     ]
   end
 
@@ -55,11 +55,11 @@ defmodule SassEx.MixProject do
   end
 
   defp generate(_) do
-    repo = "sass/embedded-protocol"
+    repo = "sass/sass"
     tag = "HEAD"
     # Download the latest proto file
     Mix.shell().cmd(
-      "curl https://raw.githubusercontent.com/#{repo}/#{tag}/embedded_sass.proto --output embedded_sass.proto"
+      "curl https://raw.githubusercontent.com/#{repo}/#{tag}/spec/embedded_sass.proto --output embedded_sass.proto"
     )
 
     # Generate the elixir code
