@@ -187,7 +187,7 @@ defmodule SassEx.Processor do
 
     message = %InboundMessage.CanonicalizeResponse{id: id, result: result}
 
-    send_message(state, :canonicalize_response, message, id)
+    send_message(state, :canonicalize_response, message, compilation_id)
 
     state
   end
@@ -209,7 +209,7 @@ defmodule SassEx.Processor do
       end
 
     message = %ImportResponse{result: result, id: request.id}
-    send_message(state, :import_response, message, request.id)
+    send_message(state, :import_response, message, compilation_id)
     state
   end
 
