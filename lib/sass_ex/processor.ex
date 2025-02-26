@@ -84,11 +84,11 @@ defmodule SassEx.Processor do
     relative_importer =
       case importers do
         nil -> nil
-        [path | _] when is_binary(path) -> Importer.new(%{importer: {:path, path}})
-        _ -> Importer.new(%{importer: {:importer_id, 0}})
+        [path | _] when is_binary(path) -> %Importer{importer: {:path, path}}
+        _ -> %Importer{importer: {:importer_id, 0}}
       end
 
-    input = StringInput.new(%{source: body, importer: relative_importer, syntax: syntax})
+    input = %StringInput{source: body, importer: relative_importer, syntax: syntax}
 
     state = Map.put(state, :last_request_id, state.last_request_id + 1)
 
@@ -99,13 +99,12 @@ defmodule SassEx.Processor do
     }
 
     message =
-      InboundMessage.CompileRequest.new(%{
+      %InboundMessage.CompileRequest{
         input: {:string, input},
-        id: request.id,
         source_map: source_map,
         style: style,
         importers: importers(importers)
-      })
+      }
 
     send_message(state, :compile_request, message, request.id)
 
@@ -186,7 +185,7 @@ defmodule SassEx.Processor do
         r -> r
       end
 
-    message = InboundMessage.CanonicalizeResponse.new(%{id: id, result: result})
+    message = %InboundMessage.CanonicalizeResponse{id: id, result: result}
 
     send_message(state, :canonicalize_response, message, id)
 
@@ -203,13 +202,13 @@ defmodule SassEx.Processor do
       |> load_contents(request.url)
       |> case do
         {:ok, contents} ->
-          {:success, ImportSuccess.new(%{contents: contents})}
+          {:success, %ImportSuccess{contents: contents}}
 
         {:error, error} ->
           {:error, error}
       end
 
-    message = ImportResponse.new(%{result: result, id: request.id})
+    message = %ImportResponse{result: result, id: request.id}
     send_message(state, :import_response, message, request.id)
     state
   end
@@ -238,7 +237,9 @@ defmodule SassEx.Processor do
   defp importers(importers) do
     importers
     |> Enum.with_index()
-    |> Enum.map(&Importer.new(%{importer: {:importer_id, elem(&1, 1)}}))
+    |> Enum.map(fn {_, index} ->
+      %Importer{importer: {:importer_id, index}}
+    end)
   end
 
   defp importer_for(%{requests: requests}, compilation_id, importer_id) do

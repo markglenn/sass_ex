@@ -10,8 +10,8 @@ defmodule SassEx.RPC.Message do
   """
   def encode(type, message, compilation_id) do
     msg =
-      %{message: {type, message}}
-      |> InboundMessage.new()
+      InboundMessage
+      |> struct(message: {type, message})
       |> InboundMessage.encode()
 
     id = LEB128.encode(compilation_id)
