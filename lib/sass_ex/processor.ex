@@ -222,6 +222,7 @@ defmodule SassEx.Processor do
   end
 
   defp canonicalize_url(nil, _), do: {:error, "Invalid importer"}
+  defp canonicalize_url(importer, _url) when is_binary(importer), do: nil
   defp canonicalize_url(%module{} = importer, url), do: module.canonicalize(importer, url)
   defp canonicalize_url(importer, url), do: importer.canonicalize(nil, url)
 
