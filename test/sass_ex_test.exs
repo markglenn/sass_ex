@@ -1,5 +1,6 @@
 defmodule SassExTest do
   use ExUnit.Case
+
   doctest SassEx
 
   defmodule TestImporter do
@@ -26,20 +27,24 @@ defmodule SassExTest do
 
   test "handle simple CSS" do
     assert {:ok, _} = SassEx.compile(@css, syntax: :css)
-    assert {:error, _, _} = SassEx.compile(@scss, syntax: :css)
+    assert {:error, _, _} = SassEx.compile(@sass, syntax: :css)
   end
 
   test "handles simple SCSS" do
-    assert {:ok, _} = SassEx.compile(@scss, syntax: :scss)
+    assert {:ok, %SassEx.Response{css: "div p {\n  color: blue;\n}", source_map: ""}} =
+             SassEx.compile(@scss, syntax: :scss)
   end
 
   test "handles SASS/indented format" do
-    assert {:ok, _} = SassEx.compile(@sass, syntax: :sass)
+    assert {:ok, %SassEx.Response{css: "div p {\n  color: blue;\n}", source_map: ""}} =
+             SassEx.compile(@sass, syntax: :sass)
   end
 
   test "handles external import" do
-    assert {:ok, _} = SassEx.compile("@import 'test/fixtures/colors'")
-    assert {:error, _, _} = SassEx.compile("@import 'test/fixtures/invalid'")
+    assert {:ok, %SassEx.Response{css: ".red {\n  color: red;\n}", source_map: ""}} =
+             SassEx.compile("@import 'test/fixtures/colors'", importers: ["."])
+
+    assert {:error, _, _} = SassEx.compile("@import 'test/fixtures/invalid'", importers: ["."])
   end
 
   test "handle custom importer" do
