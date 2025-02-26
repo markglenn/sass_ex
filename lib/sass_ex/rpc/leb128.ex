@@ -6,7 +6,7 @@ defmodule SassEx.RPC.LEB128 do
 
   @type result_t :: {:ok, non_neg_integer(), binary} | :error
 
-  use Bitwise
+  import Bitwise
 
   @doc """
   Encode a positive integer value into LEB128 binary format
