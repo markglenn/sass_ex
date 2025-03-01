@@ -21,7 +21,7 @@ defmodule SassEx.Processor do
     }
   end
 
-  @type importer_t :: Module | Struct
+  @type importer_t :: module() | struct()
   @type state_t :: %{
           port: port | nil,
           buffer: binary,
