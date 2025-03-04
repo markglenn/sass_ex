@@ -7,10 +7,6 @@ defmodule SassEx.Processor do
   use GenServer
   require Logger
 
-  @macos_command "../../vendor/sass_embedded/macos/dart-sass-embedded"
-  @linux64_command "../../vendor/sass_embedded/linux64/dart-sass-embedded"
-  @win64_command "../../vendor/sass_embedded/win64/dart-sass-embedded.bat"
-
   alias Sass.EmbeddedProtocol.{InboundMessage, OutboundMessage}
   alias Sass.EmbeddedProtocol.InboundMessage.CompileRequest.Importer
 
@@ -25,7 +21,7 @@ defmodule SassEx.Processor do
     }
   end
 
-  @type importer_t :: Module | Struct
+  @type importer_t :: module() | struct()
   @type state_t :: %{
           port: port | nil,
           buffer: binary,
@@ -51,20 +47,10 @@ defmodule SassEx.Processor do
   @spec init(any) :: {:ok, state_t}
   @doc false
   def init(_opts) do
-    relative_command =
-      case :os.type() do
-        {:unix, :darwin} -> @macos_command
-        {:unix, _} -> @linux64_command
-        {:win32, _} -> @win64_command
-      end
+    [command | bin_paths] = DartSass.bin_paths()
+    args = bin_paths ++ ["--embedded"]
 
-    command =
-      __ENV__.file
-      |> Path.dirname()
-      |> Path.join(relative_command)
-      |> Path.expand()
-
-    port = Port.open({:spawn_executable, command}, [:binary, :exit_status])
+    port = Port.open({:spawn_executable, command}, [:binary, :exit_status, {:args, args}])
 
     {:ok, %{port: port, buffer: <<>>, requests: %{}, last_request_id: 0}}
   end
@@ -98,11 +84,11 @@ defmodule SassEx.Processor do
     relative_importer =
       case importers do
         nil -> nil
-        [path | _] when is_binary(path) -> Importer.new(%{importer: {:path, path}})
-        _ -> Importer.new(%{importer: {:importer_id, 0}})
+        [path | _] when is_binary(path) -> %Importer{importer: {:path, path}}
+        _ -> %Importer{importer: {:importer_id, 0}}
       end
 
-    input = StringInput.new(%{source: body, importer: relative_importer, syntax: syntax})
+    input = %StringInput{source: body, importer: relative_importer, syntax: syntax}
 
     state = Map.put(state, :last_request_id, state.last_request_id + 1)
 
@@ -113,15 +99,14 @@ defmodule SassEx.Processor do
     }
 
     message =
-      InboundMessage.CompileRequest.new(%{
+      %InboundMessage.CompileRequest{
         input: {:string, input},
-        id: request.id,
         source_map: source_map,
         style: style,
         importers: importers(importers)
-      })
+      }
 
-    send_message(state, :compile_request, message)
+    send_message(state, :compile_request, message, request.id)
 
     # This is an asynchronouse call, so don't yet reply to the caller
     {:noreply, %{state | requests: Map.put(state.requests, request.id, request)}}
@@ -143,7 +128,7 @@ defmodule SassEx.Processor do
 
   # no-op catch-all callback for unhandled messages
   def handle_info(msg, state) do
-    Logger.warn(fn -> "Invalid message received: #{inspect(msg)}" end)
+    Logger.warning(fn -> "Invalid message received: #{inspect(msg)}" end)
     {:noreply, state}
   end
 
@@ -153,9 +138,9 @@ defmodule SassEx.Processor do
       :incomplete ->
         {:noreply, state}
 
-      {:ok, %{message: {_, message}}, rest} ->
+      {:ok, compilation_id, %{message: {_, message}}, rest} ->
         state
-        |> handle_message(message)
+        |> handle_message(compilation_id, message)
         |> Map.put(:buffer, rest)
         |> decode_message()
     end
@@ -167,12 +152,13 @@ defmodule SassEx.Processor do
     :ok
   end
 
-  defp send_message(%{port: port}, type, message),
-    do: Port.command(port, Message.encode(type, message))
+  defp send_message(%{port: port}, type, message, compilation_id),
+    do: Port.command(port, Message.encode(type, message, compilation_id))
 
   defp handle_message(
          state,
-         %OutboundMessage.CompileResponse{id: id, result: {_, message}}
+         id,
+         %OutboundMessage.CompileResponse{result: {_, message}}
        ) do
     case Map.get(state.requests, id) do
       %Request{pid: pid} ->
@@ -185,10 +171,9 @@ defmodule SassEx.Processor do
     end
   end
 
-  defp handle_message(state, %OutboundMessage.CanonicalizeRequest{
+  defp handle_message(state, compilation_id, %OutboundMessage.CanonicalizeRequest{
          id: id,
          importer_id: importer_id,
-         compilation_id: compilation_id,
          url: url
        }) do
     result =
@@ -200,41 +185,44 @@ defmodule SassEx.Processor do
         r -> r
       end
 
-    message = InboundMessage.CanonicalizeResponse.new(%{id: id, result: result})
+    message = %InboundMessage.CanonicalizeResponse{id: id, result: result}
 
-    send_message(state, :canonicalize_response, message)
+    send_message(state, :canonicalize_response, message, compilation_id)
 
     state
   end
 
-  defp handle_message(state, %OutboundMessage.ImportRequest{} = request) do
+  defp handle_message(state, compilation_id, %OutboundMessage.ImportRequest{} = request) do
     alias Sass.EmbeddedProtocol.InboundMessage.ImportResponse
     alias Sass.EmbeddedProtocol.InboundMessage.ImportResponse.ImportSuccess
 
     result =
       state
-      |> importer_for(request.compilation_id, request.importer_id)
+      |> importer_for(compilation_id, request.importer_id)
       |> load_contents(request.url)
       |> case do
         {:ok, contents} ->
-          {:success, ImportSuccess.new(%{contents: contents})}
+          {:success, %ImportSuccess{contents: contents}}
 
         {:error, error} ->
           {:error, error}
       end
 
-    message = ImportResponse.new(%{result: result, id: request.id})
-    send_message(state, :import_response, message)
+    message = %ImportResponse{result: result, id: request.id}
+    send_message(state, :import_response, message, compilation_id)
     state
   end
 
-  defp handle_message(state, response) do
-    Logger.warn(fn -> "Unknown message received from SASS compiler: #{inspect(response)}" end)
+  defp handle_message(state, compilation_id, response) do
+    Logger.warning(fn ->
+      "Unknown message received from SASS compiler: id=#{inspect(compilation_id)}, response=#{inspect(response)}"
+    end)
 
     state
   end
 
   defp canonicalize_url(nil, _), do: {:error, "Invalid importer"}
+  defp canonicalize_url(importer, _url) when is_binary(importer), do: nil
   defp canonicalize_url(%module{} = importer, url), do: module.canonicalize(importer, url)
   defp canonicalize_url(importer, url), do: importer.canonicalize(nil, url)
 
@@ -250,7 +238,9 @@ defmodule SassEx.Processor do
   defp importers(importers) do
     importers
     |> Enum.with_index()
-    |> Enum.map(&Importer.new(%{importer: {:importer_id, elem(&1, 1)}}))
+    |> Enum.map(fn {_, index} ->
+      %Importer{importer: {:importer_id, index}}
+    end)
   end
 
   defp importer_for(%{requests: requests}, compilation_id, importer_id) do
